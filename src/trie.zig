@@ -43,7 +43,7 @@ pub fn Trie(comptime T: type) type {
                 if (node.childs[letter - 32]) |n| {
                     node = n;
                 } else {
-                    return undefined;
+                    return null;
                 }
             }
 

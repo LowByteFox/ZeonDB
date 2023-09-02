@@ -5,11 +5,10 @@ const types = @import("./types.zig");
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
-    var db: *trie.Trie(types.Value) = undefined;
 
     defer std.debug.assert(gpa.deinit() == .ok);
 
-    db = try trie.Trie(types.Value).init(allocator);
+    var db = try trie.Trie(types.Value).init(allocator);
 
     defer allocator.destroy(db);
     defer db.deinit(allocator);

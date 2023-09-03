@@ -48,11 +48,58 @@ pub const Lexer = struct {
             current = self.read();
         }
         str[str.len - 1] = 0;
+        str = try allocator.realloc(str, str.len);
 
         self.back();
 
+        if (std.mem.eql(u8, "true", str[0..4])) {
+            return token{
+                .t = tokens.bool,
+                .s = str
+            };
+        } else if (str.len > 5) {
+            if (std.mem.eql(u8, "false", str[0..5])) {
+                return token{
+                    .t = tokens.bool,
+                    .s = str
+                };
+            }
+        }
+
         return token{
             .t = tokens.identifier,
+            .s = str
+        };
+    }
+
+    pub fn consume_string(self: *Lexer, delim: u8, allocator: std.mem.Allocator) !token {
+        var str: []u8 = try allocator.alloc(u8, 1);
+
+        var current = self.read();
+        str[str.len - 1] = current;
+        str = try allocator.realloc(str, str.len + 1);
+
+        while (true) {
+            current = self.read();
+            var next = self.read();
+            if (current == 0) break;
+            if (current == '\\' and next == delim) {
+                str[str.len - 1] = current;
+                str = try allocator.realloc(str, str.len + 1);
+                str[str.len - 1] = next;
+                str = try allocator.realloc(str, str.len + 1);
+                continue;
+            }
+            self.back();
+            str[str.len - 1] = current;
+            str = try allocator.realloc(str, str.len + 1);
+            if (current == delim) break;
+        }
+        str[str.len - 1] = 0;
+        str = try allocator.realloc(str, str.len);
+
+        return token{
+            .t = tokens.string,
             .s = str
         };
     }
@@ -74,6 +121,7 @@ pub const Lexer = struct {
             if (current == '.' and is_float) break;
         }
         str[str.len - 1] = 0;
+        str = try allocator.realloc(str, str.len);
 
         self.back();
 
@@ -93,6 +141,9 @@ pub const Lexer = struct {
                     .s = try allocator.alloc(u8, 1),
                     .t = tokens.eof,
                 };
+            } else if (tok == '"' or tok == '\'') {
+                self.back();
+                return try self.consume_string(tok, allocator);
             } else if (std.ascii.isAlphabetic(tok) or tok == '_') {
                 self.back();
                 return try self.consume_identifier(allocator);

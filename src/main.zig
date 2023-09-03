@@ -12,7 +12,7 @@ pub fn main() !void {
     var db = try collection.Collection.init(allocator);
     defer db.deinit(allocator);
 
-    var lexer = lex.Lexer.init("set hyro true false");
+    var lexer = lex.Lexer.init("set users.hyro.isNice true \"xd\" 5 5.7");
     var tok = try lexer.generate_token(allocator);
     while (tok.t != tk.TokenTypes.eof) {
         std.debug.print("{?}\n", .{tok});

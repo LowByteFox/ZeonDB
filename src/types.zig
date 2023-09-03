@@ -1,15 +1,19 @@
+const collection = @import("collection.zig");
+
 pub const Types = enum {
     String,
     Int,
     Float,
-    Bool
+    Bool,
+    Collection,
 };
 
 pub const ValueU = union {
     s: []const u8,
     i: i64,
     f: f64,
-    b: bool
+    b: bool,
+    c: collection.Collection
 };
 
 pub const Value = struct {

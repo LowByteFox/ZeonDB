@@ -1,6 +1,5 @@
 const std = @import("std");
-const trie = @import("./trie.zig");
-const types = @import("./types.zig");
+const collection = @import("collection.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -8,26 +7,24 @@ pub fn main() !void {
 
     defer std.debug.assert(gpa.deinit() == .ok);
 
-    var db = try trie.Trie(types.Value).init(allocator);
-
-    defer allocator.destroy(db);
+    var db = try collection.Collection.init(allocator);
     defer db.deinit(allocator);
 
-    try db.add("s", types.Value{
-        .type = types.Types.Int,
-        .value = types.ValueU{
-            .i = 69
-        }
+    var db2 = try collection.Collection.init(allocator);
+    defer db2.deinit(allocator);
+
+    try db.add("json", collection.Types.Collection, collection.Value{
+        .c = db2
     }, allocator);
 
-    var ops: i64 = 0;
-    const start = std.time.milliTimestamp();
-    while (std.time.milliTimestamp() - start < 1000) {
-        if (db.get("s")) |V| {
-            _ = V;
-            ops += 1;
+    try db2.add("number", collection.Types.Int, collection.Value{
+        .i = 69
+    }, allocator);
+
+    // json test haha
+    if (db.get("json")) |obj| {
+        if (obj.value.c.get("number")) |num| {
+            std.debug.print("{}\n", .{num.value.i});
         }
     }
-
-    std.debug.print("Read count: {}\n", .{ops});
 }

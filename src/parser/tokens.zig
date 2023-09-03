@@ -7,7 +7,7 @@ pub const TokenTypes = enum {
     float,
     bool,
     dot,
-    lsquarebrakcet,
+    lsquarebracket,
     rsquarebracket,
     lsquiglybracket,
     rsquiglybracket

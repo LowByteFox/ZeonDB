@@ -56,7 +56,9 @@ pub const Lexer = struct {
         }
         str = try allocator.realloc(str, str.len - 1);
 
-        self.back();
+        if (current != 0) {
+            self.back();
+        }
 
         if (std.mem.eql(u8, "true", str)) {
             return token{
@@ -102,6 +104,14 @@ pub const Lexer = struct {
         }
         str = try allocator.realloc(str, str.len - 1);
 
+        if (str.len == 1 and str[0] == delim) {
+            allocator.free(str);
+            return token{
+                .t = tokens.eof,
+                .s = try allocateStr("EOF", allocator)
+            };
+        }
+
         return token{
             .t = tokens.string,
             .s = str
@@ -126,7 +136,9 @@ pub const Lexer = struct {
         }
         str = try allocator.realloc(str, str.len - 1);
 
-        self.back();
+        if (current != 0) {
+            self.back();
+        }
 
         return token{
             .t = if (is_float) tokens.float else tokens.int,
@@ -138,9 +150,9 @@ pub const Lexer = struct {
         self.skip_blank();
         const tok = self.read();
 
-        if (tok == 0 or self.len == self.pos) {
+        if (tok == 0) {
             return token{
-                .s = try allocator.alloc(u8, 1),
+                .s = try allocateStr("EOF", allocator),
                 .t = tokens.eof,
             };
         }
@@ -153,6 +165,30 @@ pub const Lexer = struct {
                 return token{
                     .s = try allocateStr(".", allocator),
                     .t = tokens.dot
+                };
+            },
+            '[' => {
+                return token{
+                    .s = try allocateStr("[", allocator),
+                    .t = tokens.lsquarebracket
+                };
+            },
+            ']' => {
+                return token{
+                    .s = try allocateStr("]", allocator),
+                    .t = tokens.rsquarebracket
+                };
+            },
+            '{' => {
+                return token{
+                    .s = try allocateStr("{", allocator),
+                    .t = tokens.lsquiglybracket
+                };
+            },
+            '}' => {
+                return token{
+                    .s = try allocateStr("}", allocator),
+                    .t = tokens.rsquiglybracket
                 };
             },
             else => {}

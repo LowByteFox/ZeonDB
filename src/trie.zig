@@ -1,4 +1,5 @@
 const std = @import("std");
+const types = @import("types.zig");
 
 pub fn Trie(comptime T: type) type {
     return struct {
@@ -13,6 +14,22 @@ pub fn Trie(comptime T: type) type {
         }
 
         pub fn deinit(self: *Trie(T), allocator: std.mem.Allocator) void {
+            if (T == types.Value) {
+                if (self.data != null) {
+                    switch (self.data.?.t) {
+                        types.Types.Collection => {
+                            self.data.?.v.c.deinit(allocator);
+                        },
+
+                        types.Types.Array => {
+                            self.data.?.v.a.deinit();
+                        },
+
+                        else => {}
+                    }
+                }
+            }
+
             for (self.childs) |child| {
                 if (child) |chld| {
                     chld.deinit(allocator);

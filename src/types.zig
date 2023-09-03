@@ -1,6 +1,8 @@
+const std = @import("std");
 const collection = @import("collection.zig");
 
 pub const Types = enum {
+    Array,
     String,
     Int,
     Float,
@@ -9,6 +11,7 @@ pub const Types = enum {
 };
 
 pub const ValueU = union {
+    a: std.ArrayList(Value),
     s: []const u8,
     i: i64,
     f: f64,
@@ -17,7 +20,6 @@ pub const ValueU = union {
 };
 
 pub const Value = struct {
-    type: Types,
-    value: ValueU
+    t: Types,
+    v: ValueU
 };
-

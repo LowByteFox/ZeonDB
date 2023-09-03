@@ -10,21 +10,37 @@ pub fn main() !void {
     var db = try collection.Collection.init(allocator);
     defer db.deinit(allocator);
 
-    var db2 = try collection.Collection.init(allocator);
-    defer db2.deinit(allocator);
+    var arr = std.ArrayList(collection.RawValue).init(allocator);
 
-    try db.add("json", collection.Types.Collection, collection.Value{
-        .c = db2
+    try arr.append(collection.RawValue{
+        .t = collection.Types.Int,
+        .v = collection.Value{
+            .i = 69
+        }
+    });
+
+    try arr.append(collection.RawValue{
+        .t = collection.Types.String,
+        .v = collection.Value{
+            .s = "Now this is pog"
+        }
+    });
+
+    try db.add("arr", collection.Types.Array, collection.Value{
+        .a = arr
     }, allocator);
 
-    try db2.add("number", collection.Types.Int, collection.Value{
-        .i = 69
-    }, allocator);
-
-    // json test haha
-    if (db.get("json")) |obj| {
-        if (obj.value.c.get("number")) |num| {
-            std.debug.print("{}\n", .{num.value.i});
+    if (db.get("arr")) |ar| {
+        for (ar.v.a.items) |item| {
+            switch (item.t) {
+                collection.Types.String => {
+                    std.debug.print("{s}\n", .{item.v.s});
+                },
+                collection.Types.Int => {
+                    std.debug.print("{}\n", .{item.v.i});
+                },
+                else => {}
+            }
         }
     }
 }

@@ -17,10 +17,10 @@ pub const Collection = struct {
         allocator.destroy(self.db);
     }
 
-    pub fn add(self: *Collection, key: []const u8, dataType: types.Types, value: types.ValueU, allocator: std.mem.Allocator) !void {
+    pub fn add(self: *Collection, key: []const u8, dataType: Types, value: Value, allocator: std.mem.Allocator) !void {
         try self.db.add(key, types.Value{
-            .type = dataType,
-            .value = value
+            .t = dataType,
+            .v = value
         }, allocator);
     }
 
@@ -31,3 +31,4 @@ pub const Collection = struct {
 
 pub const Types = types.Types;
 pub const Value = types.ValueU;
+pub const RawValue = types.Value;

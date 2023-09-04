@@ -38,7 +38,7 @@ pub const Lexer = struct {
         var current = self.read();
         if (current == 0) return;
 
-        while (current == ' ' or current == '\t') {
+        while (current == ' ' or current == '\t' or current == '\n') {
             current = self.read();
         }
         self.back();

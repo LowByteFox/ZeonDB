@@ -1,15 +1,25 @@
 const std = @import("std");
-const trie = @import("trie.zig");
+const trie = @import("./trie.zig");
 const types = @import("./types.zig");
+const exec = @import("./executor.zig");
 
 // A Collection is Trie with improved API and data encapsulation
 pub const Collection = struct {
     db: *trie.Trie(types.Value),
+    executor: ?exec.Executor,
 
     pub fn init(allocator: std.mem.Allocator) !Collection {
         return Collection{
-            .db = try trie.Trie(types.Value).init(allocator)
+            .db = try trie.Trie(types.Value).init(allocator),
+            .executor = null
         };
+    }
+
+    pub fn prepare_executor(self: *Collection) void {
+        var e = exec.Executor.init(self);
+        if (e != null) {
+            self.executor = e;
+        }
     }
 
     pub fn deinit(self: *Collection, allocator: std.mem.Allocator) void {
@@ -17,11 +27,8 @@ pub const Collection = struct {
         allocator.destroy(self.db);
     }
 
-    pub fn add(self: *Collection, key: []const u8, dataType: Types, value: Value, allocator: std.mem.Allocator) !void {
-        try self.db.add(key, types.Value{
-            .t = dataType,
-            .v = value
-        }, allocator);
+    pub fn add(self: *Collection, key: []const u8, value: Value, allocator: std.mem.Allocator) !void {
+        try self.db.add(key, value, allocator);
     }
 
     pub fn get(self: *const Collection, key: []const u8) ?types.Value {
@@ -30,5 +37,4 @@ pub const Collection = struct {
 };
 
 pub const Types = types.Types;
-pub const Value = types.ValueU;
-pub const RawValue = types.Value;
+pub const Value = types.Value;

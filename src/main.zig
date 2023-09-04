@@ -12,13 +12,11 @@ pub fn main() !void {
     var db = try collection.Collection.init(allocator);
     defer db.deinit(allocator);
 
-    var lexer = lex.Lexer.init("\"set\\\"xd\\\"\" kokot ahoj cau{} []");
-    var tok = try lexer.generate_token(allocator);
-    while (tok.t != tk.TokenTypes.eof) {
-        std.debug.print("{s}\n", .{tok.s});
-        allocator.free(tok.s);
-        tok = try lexer.generate_token(allocator);
-    }
+    try db.add("hyro", collection.Value{
+        .Bool = true
+    }, allocator);
 
-    allocator.free(tok.s);
+    if (db.get("hyro")) |v| {
+        std.debug.print("{?}", .{v});
+    }
 }

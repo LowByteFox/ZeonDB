@@ -16,13 +16,13 @@ pub fn Trie(comptime T: type) type {
         pub fn deinit(self: *Trie(T), allocator: std.mem.Allocator) void {
             if (T == types.Value) {
                 if (self.data != null) {
-                    switch (self.data.?.t) {
+                    switch (self.data.?) {
                         types.Types.Collection => {
-                            self.data.?.v.c.deinit(allocator);
+                            self.data.?.Collection.deinit(allocator);
                         },
 
                         types.Types.Array => {
-                            self.data.?.v.a.deinit();
+                            self.data.?.Array.deinit();
                         },
 
                         else => {}

@@ -10,16 +10,11 @@ pub const Types = enum {
     Collection,
 };
 
-pub const ValueU = union {
-    a: std.ArrayList(Value),
-    s: []const u8,
-    i: i64,
-    f: f64,
-    b: bool,
-    c: collection.Collection
-};
-
-pub const Value = struct {
-    t: Types,
-    v: ValueU
+pub const Value = union(Types) {
+    Array: std.ArrayList(Value),
+    String: []const u8,
+    Int: i64,
+    Float: f64,
+    Bool: bool,
+    Collection: collection.Collection
 };

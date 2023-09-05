@@ -28,9 +28,22 @@ pub const Parser = struct {
         try n.setToken(tok, allocator);
         try arr.append(n);
 
+        var is_key: bool = false;
+
         while (tok.t != tk.TokenTypes.eof) {
             allocator.free(tok.s);
             tok = try self.lexer.generate_token(allocator);
+            if (tok.t == tk.TokenTypes.eof) break;
+            if (!is_key) {
+                n = ast.Node.init("Key");
+                try n.setToken(tok, allocator);
+                try arr.append(n);
+                is_key = true;
+                continue;
+            }
+            n = ast.Node.init("Value");
+            try n.setToken(tok, allocator);
+            try arr.append(n);
         }
 
         allocator.free(tok.s);

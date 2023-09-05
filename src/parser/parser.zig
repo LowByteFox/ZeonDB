@@ -24,30 +24,44 @@ pub const Parser = struct {
             // FIX: Must be fixed 
             unreachable;
         }
-        var n = ast.Node.init("Command");
-        try n.setToken(tok, allocator);
-        try arr.append(n);
 
-        var is_key: bool = false;
+        try self.parse_command(tok, &arr, allocator);
 
         while (tok.t != tk.TokenTypes.eof) {
-            allocator.free(tok.s);
             tok = try self.lexer.generate_token(allocator);
-            if (tok.t == tk.TokenTypes.eof) break;
-            if (!is_key) {
-                n = ast.Node.init("Key");
-                try n.setToken(tok, allocator);
-                try arr.append(n);
-                is_key = true;
-                continue;
+            if (tok.t == tk.TokenTypes.eof) {
+                break;
             }
-            n = ast.Node.init("Value");
-            try n.setToken(tok, allocator);
-            try arr.append(n);
+            try self.parse_command(tok, &arr, allocator);
         }
 
         allocator.free(tok.s);
 
         return arr;
+    }
+
+    fn parse_command(self: *Parser, tok: tk.Token, arr: *std.ArrayList(ast.Node), allocator: std.mem.Allocator) !void {
+        var node = ast.Node.init("Command");
+        try node.setToken(tok, allocator);
+        try arr.append(node);
+        allocator.free(tok.s);
+
+        node = ast.Node.init("Key");
+        var tok2 = try self.lexer.generate_token(allocator);
+        try node.setToken(tok2, allocator);
+        try arr.append(node);
+        allocator.free(tok2.s);
+
+        node = try self.parse_value(allocator);
+        try arr.append(node);
+    }
+
+    fn parse_value(self: *Parser, allocator: std.mem.Allocator) !ast.Node {
+        var tok = try self.lexer.generate_token(allocator);
+        var node = ast.Node.init("Value");
+        try node.setToken(tok, allocator);
+        allocator.free(tok.s);
+
+        return node;
     }
 };

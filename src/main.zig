@@ -12,7 +12,7 @@ pub fn main() !void {
     var db = try collection.Collection.init(allocator);
     defer db.deinit(allocator);
 
-    db.prepare_executor("set ahoj cau");
+    db.prepare_executor("set ahoj cau set xd nice");
 
     try db.executor.?.exec(allocator);
 }

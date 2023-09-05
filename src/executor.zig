@@ -29,7 +29,7 @@ pub const Executor = struct {
         var arr = try self.parser.parse(allocator);
 
         for (0..arr.items.len) |i| {
-            std.debug.print("{?}\n", .{arr.items[i].tok.?});
+            std.debug.print("{s} {s}\n", .{arr.items[i].name, arr.items[i].tok.?.s});
             allocator.free(arr.items[i].tok.?.s);
         }
 

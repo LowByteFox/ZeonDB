@@ -1,7 +1,7 @@
 const std = @import("std");
 const toks = @import("./tokens.zig");
 
-// Names
+// Names:
 // Command
 // Key
 // Value

@@ -15,8 +15,8 @@ pub const Collection = struct {
         };
     }
 
-    pub fn prepare_executor(self: *Collection) void {
-        var e = exec.Executor.init(self);
+    pub fn prepare_executor(self: *Collection, code: []const u8) void {
+        var e = exec.Executor.init(self, code);
         if (e != null) {
             self.executor = e;
         }

@@ -12,11 +12,7 @@ pub fn main() !void {
     var db = try collection.Collection.init(allocator);
     defer db.deinit(allocator);
 
-    try db.add("hyro", collection.Value{
-        .Bool = true
-    }, allocator);
+    db.prepare_executor("set ahoj cau");
 
-    if (db.get("hyro")) |v| {
-        std.debug.print("{?}", .{v});
-    }
+    try db.executor.?.exec(allocator);
 }

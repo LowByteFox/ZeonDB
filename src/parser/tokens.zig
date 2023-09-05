@@ -15,5 +15,5 @@ pub const TokenTypes = enum {
 
 pub const Token = struct {
     t: TokenTypes,
-    s: []const u8,
+    s: []u8,
 };

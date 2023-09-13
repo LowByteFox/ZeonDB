@@ -1,10 +1,6 @@
-# ZDB
-Simple and FAST DB in zig
+# ZeonDB
+A Cell based Database. Imagine Neo4j, Redis and Git having a baby.
 
 <img src="./logo.png" w=256>
 
 ## Features
-- [ ] Minimal language for communication
-- [x] Fast KV read and write
-- [ ] Lua function
-- [ ] Many more

@@ -4,11 +4,11 @@ const types = @import("./types.zig");
 
 // A Collection is Trie with improved API and data encapsulation
 pub const Collection = struct {
-    db: *trie.Trie(types.Value),
+    db: *trie.Trie(*types.Value),
 
     pub fn init(allocator: std.mem.Allocator) !Collection {
         return Collection{
-            .db = try trie.Trie(types.Value).init(allocator),
+            .db = try trie.Trie(*types.Value).init(allocator),
         };
     }
 
@@ -17,11 +17,11 @@ pub const Collection = struct {
         allocator.destroy(self.db);
     }
 
-    pub fn add(self: *Collection, key: []const u8, value: Value, allocator: std.mem.Allocator) !void {
+    pub fn add(self: *Collection, key: []const u8, value: *Value, allocator: std.mem.Allocator) !void {
         try self.db.add(key, value, allocator);
     }
 
-    pub fn get(self: *const Collection, key: []const u8) ?types.Value {
+    pub fn get(self: *const Collection, key: []const u8) ?*types.Value {
         return self.db.get(key);
     }
 };

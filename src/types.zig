@@ -11,7 +11,7 @@ pub const Types = enum {
 };
 
 pub const Value = union(Types) {
-    Array: std.ArrayList(Value),
+    Array: std.ArrayList(*Value),
     String: []const u8,
     Int: i64,
     Float: f64,

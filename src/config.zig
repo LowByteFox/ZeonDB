@@ -101,7 +101,7 @@ pub fn load_config(allocator: std.mem.Allocator) !toml.Parsed(Config) {
     if (local_config_file) |file| {
         var buf = try read_file(file, allocator);
         if (buf) |b| {
-            defer allocator.free(buf.?);
+            defer allocator.free(b);
             return try parser.parseString(b);
         }
     }
@@ -109,7 +109,7 @@ pub fn load_config(allocator: std.mem.Allocator) !toml.Parsed(Config) {
     if (global_config_file) |file| {
         var buf = try read_file(file, allocator);
         if (buf) |b| {
-            defer allocator.free(buf.?);
+            defer allocator.free(b);
             return try parser.parseString(b);
         }
     }

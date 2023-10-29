@@ -1,0 +1,32 @@
+[output]
+format = "JSON" # ZQL | JSON
+binary_format = "array" # raw | array
+
+
+# compression -> gzip | xz | lzma | zstd
+# bundle -> combine persisted data into single archive ideal for backups and migration
+# filename -> name of the archive ( prefix if not bundle)
+[persistence]
+enable = false
+
+[branch]
+default = "main" # name of default branch
+merge_mode = "overwrite" # no_overwrite | overwrite | swap
+
+[accounts]
+default = "guest"
+[accounts.password]
+min_length = 8
+max_length = 32
+
+[communication]
+max_connections = 1000
+[communication.ip]
+enable = true
+port = 6748
+
+# user -> user allowed to "bypass" auth limited to only one workspace
+# workspace -> a path to collection used for isolation
+# mode -> r | w | rw - permission mode (r allows GET requests, w allows POST requests)
+[communication.html]
+enable = false

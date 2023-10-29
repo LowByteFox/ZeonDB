@@ -5,12 +5,18 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
+    const toml_module = b.addModule("ztoml", .{
+        .source_file = std.Build.FileSource.relative("libs/zig-toml/src/main.zig"),
+    });
+
     const exe = b.addExecutable(.{
         .name = "ZeonDB",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
     });
+
+    exe.addModule("ztoml", toml_module);
 
     b.installArtifact(exe);
 

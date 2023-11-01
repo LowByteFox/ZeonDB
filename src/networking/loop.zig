@@ -6,6 +6,7 @@ pub const Client = struct {
     server: *Server,
     tmpbuff: [1024]u8,
     buffer: ?[]u8,
+    written: usize,
     client: xev.TCP,
     completion: xev.Completion,
 };
@@ -17,6 +18,7 @@ pub fn on_accept(self: ?*Server, l: *xev.Loop, _: *xev.Completion, connection: x
     client.completion = undefined;
     client.tmpbuff = undefined;
     client.buffer = null;
+    client.written = 0;
 
     client.client.read(l, &client.completion, .{ .slice = &client.tmpbuff }, Client, client, &on_read);
 
@@ -32,19 +34,30 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
     };
 
     if (self.?.buffer == null) {
-        self.?.buffer = self.?.server.allocator.?.alloc(u8, bytes_read) catch unreachable;
-        @memcpy(self.?.buffer.?, self.?.tmpbuff[0..bytes_read]);
+        var i: usize = 0;
+        for (self.?.tmpbuff) |ch| {
+            if (!std.ascii.isDigit(ch)) {
+                break;
+            }
+            i += 1;
+        }
+        var len = std.fmt.parseInt(usize, self.?.tmpbuff[0..i], 10) catch unreachable;
+        self.?.buffer = self.?.server.allocator.?.alloc(u8, len) catch unreachable;
+        @memcpy(self.?.buffer.?[0..(bytes_read - i)], self.?.tmpbuff[i..bytes_read]);
+        self.?.written = bytes_read - i;
     } else {
-        var len = self.?.buffer.?.len;
-        self.?.buffer = self.?.server.allocator.?.realloc(self.?.buffer.?, len + bytes_read) catch unreachable;
-        @memcpy(self.?.buffer.?[len..], self.?.tmpbuff[0..bytes_read]);
+        if (bytes_read > self.?.buffer.?.len - self.?.written) {
+            bytes_read = self.?.buffer.?.len - self.?.written;
+        }
+        @memcpy(self.?.buffer.?[self.?.written..(self.?.written + bytes_read)], self.?.tmpbuff[0..bytes_read]);
+        self.?.written += bytes_read;
     }
 
-    if (std.mem.eql(u8, self.?.tmpbuff[(bytes_read - 4)..bytes_read], "\r\n\r\n")) {
+    if (self.?.written == self.?.buffer.?.len) {
         var len = self.?.buffer.?.len;
         @memset(self.?.buffer.?[(len - 4)..], 0);
         std.debug.print("{s}\n", .{self.?.buffer.?});
-        return .rearm;
+        return .disarm;
     }
 
     return .rearm;
@@ -52,7 +65,7 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
 
 pub fn bozo_left(bozo: *Client) void {
     if (bozo.buffer != null) {
-        bozo.server.allocator.?.free(bozo.buffer);
+        bozo.server.allocator.?.free(bozo.buffer.?);
     }
     bozo.server.allocator.?.destroy(bozo);
 }
@@ -89,6 +102,7 @@ pub const Server = struct {
 
         self.socket.accept(&self.loop, &self.completion, @This(), self, &on_accept);
 
+        std.debug.print("Started serving at {any}!\n", .{self.address});
         try self.loop.run(.until_done);
     }
 

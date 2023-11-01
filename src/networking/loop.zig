@@ -1,11 +1,12 @@
 const xev = @import("xev");
 const std = @import("std");
 const collection = @import("../collection.zig");
+const parser = @import("../zql/parser.zig");
 
 pub const Client = struct {
     server: *Server,
     tmpbuff: [1024]u8,
-    buffer: ?[]u8,
+    buffer: ?[:0]u8,
     written: usize,
     client: xev.TCP,
     completion: xev.Completion,
@@ -50,12 +51,13 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             return .disarm;
         };
 
-        self.?.buffer = self.?.server.allocator.?.alloc(u8, len) catch {
+        self.?.buffer = self.?.server.allocator.?.allocSentinel(u8, len, 0) catch {
             bozo_left(self.?);
             return .disarm;
         };
 
         @memcpy(self.?.buffer.?[0..(bytes_read - i)], self.?.tmpbuff[i..bytes_read]);
+
         self.?.written = bytes_read - i;
     } else {
         if (bytes_read > self.?.buffer.?.len - self.?.written) {
@@ -66,13 +68,16 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
     }
 
     if (self.?.written == self.?.buffer.?.len) {
-        var len = self.?.buffer.?.len;
-        @memset(self.?.buffer.?[(len - 4)..], 0);
-        std.debug.print("{s}\n", .{self.?.buffer.?});
+        execute(self.?) catch unreachable;
         return .disarm;
     }
 
     return .rearm;
+}
+
+pub fn execute(client: *Client) !void {
+    var parse = parser.Parser.init(client.server.db.?, client.buffer.?);
+    try parse.run(client.server.allocator.?.*);
 }
 
 pub fn bozo_left(bozo: *Client) void {

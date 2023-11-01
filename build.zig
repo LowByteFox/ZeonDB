@@ -18,6 +18,10 @@ pub fn build(b: *std.Build) void {
 
     exe.addModule("ztoml", toml_module);
 
+    const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
+    exe.addModule("xev", xev.module("xev"));
+
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

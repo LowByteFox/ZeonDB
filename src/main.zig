@@ -19,5 +19,5 @@ pub fn main() !void {
     var server = try network.Server.init(6969);
     defer server.deinit();
 
-    try server.run();
+    try server.run(&db, &allocator);
 }

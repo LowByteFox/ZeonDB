@@ -12,9 +12,13 @@ pub const Client = struct {
 };
 
 pub fn on_accept(self: ?*Server, l: *xev.Loop, _: *xev.Completion, connection: xev.TCP.AcceptError!xev.TCP) xev.CallbackAction {
-    var client = self.?.allocator.?.create(Client) catch unreachable;
+    var client = self.?.allocator.?.create(Client) catch {
+        return .disarm;
+    };
     client.server = self.?;
-    client.client = connection catch unreachable;
+    client.client = connection catch {
+        return .disarm;
+    };
     client.completion = undefined;
     client.tmpbuff = undefined;
     client.buffer = null;
@@ -41,8 +45,16 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             }
             i += 1;
         }
-        var len = std.fmt.parseInt(usize, self.?.tmpbuff[0..i], 10) catch unreachable;
-        self.?.buffer = self.?.server.allocator.?.alloc(u8, len) catch unreachable;
+        var len = std.fmt.parseInt(usize, self.?.tmpbuff[0..i], 10) catch {
+            bozo_left(self.?);
+            return .disarm;
+        };
+
+        self.?.buffer = self.?.server.allocator.?.alloc(u8, len) catch {
+            bozo_left(self.?);
+            return .disarm;
+        };
+
         @memcpy(self.?.buffer.?[0..(bytes_read - i)], self.?.tmpbuff[i..bytes_read]);
         self.?.written = bytes_read - i;
     } else {

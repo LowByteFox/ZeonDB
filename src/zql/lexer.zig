@@ -67,6 +67,9 @@ pub const Lexer = struct {
         while (current == ' ' or current == '\t' or current == '\n') {
             current = self.read_char();
         }
+        if (current == 0) {
+            return;
+        }
         try self.step_back(1);
     }
 
@@ -232,6 +235,7 @@ pub const Lexer = struct {
             try self.step_back(1);
             return try self.tokenize_number(allocator);
         } else {
+            std.debug.print("{any}\n", .{tok});
             return Token{
                 .text = try allocate_str("ILL", allocator),
                 .type = TokenTypes.illegal

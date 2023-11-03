@@ -4,55 +4,13 @@ const ctx = @import("ctx.zig");
 const lex = @import("lexer.zig");
 const err = @import("errors.zig");
 const collection = @import("../collection.zig");
-
-fn test_fun(ct: *const ctx.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
-    _ = allocator;
-    std.debug.print("{s}\n", .{ ct.args.items[0].String });
-
-    const keys = [_][]const u8{
-        "hello",
-        "hello2",
-        "nice",
-        "num1",
-        "float1",
-        "float2"
-    };
-
-    for (keys) |key| {
-        var val = ct.args.items[1].Collection.get(key).?;
-        switch (val.*) {
-            types.Value.String => {
-                std.debug.print("{s} = {s}\n", .{ key, val.String });
-            },
-            types.Value.Int => {
-                std.debug.print("{s} = {}\n", .{ key, val.Int });
-            },
-            types.Value.Float => {
-                std.debug.print("{s} = {}\n", .{ key, val.Float });
-            },
-            types.Value.Bool => {
-                std.debug.print("{s} = {}\n", .{ key, val.Bool });
-            },
-            types.Value.Array => {
-                std.debug.print("{s}[0] = {s}\n", .{ key, val.Array.items[0].String });
-                std.debug.print("{s}[0]inner = {}\n", .{ key, val.Array.items[1].Collection.get("inner").?.Bool });
-            },
-            else => {
-                std.debug.print("{s} = {any}\n", .{ key, val });
-            }
-        }
-    }
-}
+const cmds = @import("commands.zig");
 
 pub fn strdup(buff: []u8, allocator: std.mem.Allocator) ![]u8 {
     var target = try allocator.alloc(u8, buff.len);
     @memcpy(target, buff);
     return target;
 }
-
-const commands = std.ComptimeStringMap(ctx.ZqlCmd, .{
-    .{"test", ctx.ZqlCmd{ .arg_count = 2, .func = test_fun }}
-});
 
 pub const Parser = struct {
     db: *collection.Collection,
@@ -76,7 +34,7 @@ pub const Parser = struct {
         }
 
         while (tok.type != lex.TokenTypes.eof) {
-            if (commands.get(tok.text)) |command| {
+            if (cmds.commands.get(tok.text)) |command| {
                 var context = ctx.ZqlContext.init(self.db, allocator);
 
                 for (0..@intCast(command.arg_count)) |i| {
@@ -90,7 +48,7 @@ pub const Parser = struct {
 
                 try contexts.append(context);
             } else {
-                return err.Errors.ExpectedCommandError;
+                std.debug.print("{s}\n", .{tok.text});
             }
             allocator.free(tok.text);
             tok = try self.lexer.parse_token(allocator);
@@ -107,7 +65,7 @@ pub const Parser = struct {
     }
 
     fn test_identifier(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) !?*types.Value {
-        if (commands.has(tok.text)) {
+        if (cmds.commands.has(tok.text)) {
             return null;
         }
 
@@ -242,12 +200,5 @@ pub const Parser = struct {
         }
 
         return err.Errors.IdentifierNotExpected;
-    }
-
-    pub fn testfun(self: *Parser, allocator: std.mem.Allocator) !void {
-        var ct = ctx.ZqlContext.init(self.db, allocator);
-        defer ct.deinit();
-        try ct.add_arg(types.Value{ .Int = 77 });
-        commands.get("test").?.func(&ct);
     }
 };

@@ -1,4 +1,5 @@
 const xev = @import("xev");
+const types = @import("../types.zig");
 const std = @import("std");
 const collection = @import("../collection.zig");
 const parser = @import("../zql/parser.zig");
@@ -56,6 +57,7 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             return .disarm;
         };
 
+        @memset(self.?.buffer.?, 0);
         @memcpy(self.?.buffer.?[0..(bytes_read - i)], self.?.tmpbuff[i..bytes_read]);
 
         self.?.written = bytes_read - i;
@@ -67,25 +69,29 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
         self.?.written += bytes_read;
     }
 
-    if (self.?.written == self.?.buffer.?.len) {
-        execute(self.?) catch unreachable;
+    if (self.?.written >= self.?.buffer.?.len) {
+        var out = execute(self.?) catch unreachable;
+        std.debug.print("{any}\n", .{out});
         return .disarm;
     }
 
     return .rearm;
 }
 
-pub fn execute(client: *Client) !void {
+pub fn execute(client: *Client) !?*types.Value {
     const allocator = client.server.allocator.?;
     var parse = parser.Parser.init(client.server.db.?, client.buffer.?);
     var args = try parse.parse(allocator.*);
+    var shared_buffer: ?*types.Value = null;
 
     for (args.items) |*ctx| {
-        try ctx.execute(allocator.*);
+        try ctx.execute(shared_buffer, allocator.*);
+        shared_buffer = ctx.buffer;
         ctx.deinit(allocator.*);
     }
 
     args.deinit();
+    return shared_buffer;
 }
 
 pub fn bozo_left(bozo: *Client) void {

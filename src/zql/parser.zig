@@ -57,53 +57,16 @@ const commands = std.ComptimeStringMap(ctx.ZqlCmd, .{
 pub const Parser = struct {
     db: *collection.Collection,
     lexer: lex.Lexer,
-    ctx: ?ctx.ZqlContext,
 
     pub fn init(db: *collection.Collection, code: [:0]const u8) Parser {
         return Parser{
             .db = db,
             .lexer = lex.Lexer.init(code),
-            .ctx = null
         };
     }
 
-    fn clean_value(self: *@This(), arg: *types.Value, allocator: std.mem.Allocator) void {
-        switch (arg.*) {
-            types.Value.String => {
-                allocator.free(arg.String);
-            },
-            types.Value.Array => {
-                self.clean_array(&arg.Array, allocator);
-                arg.Array.deinit();
-            },
-            types.Value.Collection => {
-                arg.Collection.deinit(allocator);
-            },
-            else => {}
-        }
-        allocator.destroy(arg);
-    }
-
-    fn clean_array(self: *@This(), arr: *std.ArrayList(*types.Value), allocator: std.mem.Allocator) void {
-        for (arr.items) |i| {
-            var item = @constCast(i);
-            self.clean_value(item, allocator);
-        }
-    }
-
-    fn dispose_ctx(self: *@This(), allocator: std.mem.Allocator) void {
-        for (self.ctx.?.args.items) |const_arg| {
-            var arg = @constCast(const_arg);
-            self.clean_value(arg, allocator);
-        }
-
-        self.ctx.?.args.clearAndFree();
-    }
-
-    pub fn run(self: *@This(), allocator: std.mem.Allocator) !void {
-        self.ctx = ctx.ZqlContext.init(self.db, allocator);
-        defer self.ctx.?.deinit();
-        defer self.dispose_ctx(allocator);
+    pub fn parse(self: *@This(), allocator: std.mem.Allocator) !std.ArrayList(ctx.ZqlContext) {
+        var contexts = std.ArrayList(ctx.ZqlContext).init(allocator);
         
         var tok = try self.lexer.parse_token(allocator);
         defer allocator.free(tok.text);
@@ -114,24 +77,26 @@ pub const Parser = struct {
 
         while (tok.type != lex.TokenTypes.eof) {
             if (commands.get(tok.text)) |command| {
+                var context = ctx.ZqlContext.init(self.db, allocator);
+
                 for (0..@intCast(command.arg_count)) |i| {
                     _ = i;
-                    var arg = self.parse_value(allocator) catch |e| {
-                        return e;
-                    };
-                    try self.ctx.?.add_arg(arg);
+                    var arg = try self.parse_value(allocator);
+
+                    try context.add_arg(arg);
                 }
 
-                command.func(&self.ctx.?, allocator) catch |e| {
-                    return e;
-                };
+                context.set_fn(command.func);
 
+                try contexts.append(context);
             } else {
                 return err.Errors.ExpectedCommandError;
             }
             allocator.free(tok.text);
             tok = try self.lexer.parse_token(allocator);
         }
+
+        return contexts;
     }
 
     fn init_value(self: *@This(), val: types.Value, allocator: std.mem.Allocator) !*types.Value {
@@ -200,9 +165,8 @@ pub const Parser = struct {
                 } else if (tok.type == lex.TokenTypes.comma) {
                     continue;
                 } else if (tok.type == lex.TokenTypes.eof) {
-                    for (value_array.items) |i| {
-                        var item = @constCast(i);
-                        self.clean_value(item, allocator);
+                    for (value_array.items) |item| {
+                        types.dispose(item, allocator);
                     }
                     value_array.deinit();
                     return err.Errors.GotEofError;
@@ -211,9 +175,8 @@ pub const Parser = struct {
                 var array_val: ?*types.Value = try self.parse_primitive_value(tok, allocator);
 
                 if (array_val == null) {
-                    for (value_array.items) |i| {
-                        var item = @constCast(i);
-                        self.clean_value(item, allocator);
+                    for (value_array.items) |item| {
+                        types.dispose(item, allocator);
                     }
                     value_array.deinit();
 

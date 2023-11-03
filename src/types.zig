@@ -18,3 +18,26 @@ pub const Value = union(Types) {
     Bool: bool,
     Collection: collection.Collection
 };
+
+pub fn disposeArray(array: *std.ArrayList(*Value), allocator: std.mem.Allocator) void {
+    for (array.items) |i| {
+        dispose(i, allocator);
+    }
+}
+
+pub fn dispose(val: *Value, allocator: std.mem.Allocator) void {
+    switch (val.*) {
+        Value.String => {
+            allocator.free(val.String);
+        },
+        Value.Array => {
+            disposeArray(&val.Array, allocator);
+            val.Array.deinit();
+        },
+        Value.Collection => {
+            val.Collection.deinit(allocator);
+        },
+        else => {}
+    }
+    allocator.destroy(val);
+}

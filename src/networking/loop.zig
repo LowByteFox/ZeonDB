@@ -76,8 +76,16 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
 }
 
 pub fn execute(client: *Client) !void {
+    const allocator = client.server.allocator.?;
     var parse = parser.Parser.init(client.server.db.?, client.buffer.?);
-    try parse.run(client.server.allocator.?.*);
+    var args = try parse.parse(allocator.*);
+
+    for (args.items) |*ctx| {
+        try ctx.execute(allocator.*);
+        ctx.deinit(allocator.*);
+    }
+
+    args.deinit();
 }
 
 pub fn bozo_left(bozo: *Client) void {

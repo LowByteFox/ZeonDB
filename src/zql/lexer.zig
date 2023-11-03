@@ -1,4 +1,5 @@
 const std = @import("std");
+const utils = @import("../utils.zig");
 
 pub const TokenTypes = enum {
     eof,
@@ -20,15 +21,6 @@ pub const Token = struct {
     type: TokenTypes,
     text: []u8,
 };
-
-// Function that takes constant string and makes new allocated on the heap
-// so i can free tokens as i go
-fn allocate_str(string: []const u8, allocator: std.mem.Allocator) ![]u8 {
-    var alloc = try allocator.alloc(u8, string.len);
-    @memcpy(alloc, string);
-
-    return alloc;
-}
 
 pub const LexerError = error {
     CannotGoBackwards
@@ -177,7 +169,7 @@ pub const Lexer = struct {
         if (tok == 0) {
             return Token{
                 .type = TokenTypes.eof,
-                .text = try allocate_str("EOF", allocator)
+                .text = try utils.strdup("EOF", allocator)
             };
         }
 
@@ -187,37 +179,37 @@ pub const Lexer = struct {
             },
             ':' => {
                 return Token{
-                    .text = try allocate_str(":", allocator),
+                    .text = try utils.strdup(":", allocator),
                     .type = TokenTypes.colon
                 };
             },
             ',' => {
                 return Token{
-                    .text = try allocate_str(",", allocator),
+                    .text = try utils.strdup(",", allocator),
                     .type = TokenTypes.comma
                 };
             },
             '[' => {
                 return Token{
-                    .text = try allocate_str("[", allocator),
+                    .text = try utils.strdup("[", allocator),
                     .type = TokenTypes.lsquarebracket
                 };
             },
             ']' => {
                 return Token{
-                    .text = try allocate_str("]", allocator),
+                    .text = try utils.strdup("]", allocator),
                     .type = TokenTypes.rsquarebracket
                 };
             },
             '{' => {
                 return Token{
-                    .text = try allocate_str("{", allocator),
+                    .text = try utils.strdup("{", allocator),
                     .type = TokenTypes.lsquiglybracket
                 };
             },
             '}' => {
                 return Token{
-                    .text = try allocate_str("}", allocator),
+                    .text = try utils.strdup("}", allocator),
                     .type = TokenTypes.rsquiglybracket
                 };
             },
@@ -237,7 +229,7 @@ pub const Lexer = struct {
         } else {
             std.debug.print("{any}\n", .{tok});
             return Token{
-                .text = try allocate_str("ILL", allocator),
+                .text = try utils.strdup("ILL", allocator),
                 .type = TokenTypes.illegal
             };
         }

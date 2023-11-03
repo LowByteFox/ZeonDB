@@ -1,5 +1,6 @@
 const std = @import("std");
 const toml = @import("ztoml");
+const utils = @import("utils.zig");
 
 const default_config = \\[output]
                        \\format = "JSON"
@@ -64,12 +65,6 @@ const Config = struct {
     },
 };
 
-fn copy_over(buff: []u8, start: usize, str: []const u8) void {
-    for (0..str.len) |i| {
-        buff[i + start] = str[i];
-    }
-}
-
 fn read_file(file: std.fs.File, allocator: std.mem.Allocator) !?[]u8 {
     var buff: [1024]u8 = undefined;
     var data: ?[]u8 = null;
@@ -84,7 +79,7 @@ fn read_file(file: std.fs.File, allocator: std.mem.Allocator) !?[]u8 {
         }
 
         data = try allocator.realloc(data.?, data.?.len + bytes_read);
-        copy_over(data.?, data.?.len - bytes_read, buff[0..bytes_read]);
+        utils.copy_over(data.?, data.?.len - bytes_read, buff[0..bytes_read]);
     }
 
     return data;

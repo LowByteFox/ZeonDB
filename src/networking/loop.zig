@@ -39,6 +39,8 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
         return .disarm;
     };
 
+    const allocator = self.?.server.allocator.?;
+
     if (self.?.buffer == null) {
         var i: usize = 0;
         for (self.?.tmpbuff) |ch| {
@@ -52,7 +54,7 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             return .disarm;
         };
 
-        self.?.buffer = self.?.server.allocator.?.allocSentinel(u8, len, 0) catch {
+        self.?.buffer = allocator.allocSentinel(u8, len, 0) catch {
             bozo_left(self.?);
             return .disarm;
         };
@@ -71,7 +73,9 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
 
     if (self.?.written >= self.?.buffer.?.len) {
         var out = execute(self.?) catch unreachable;
-        std.debug.print("{any}\n", .{out});
+        if (out) |o| {
+            std.debug.print("{s}\n", .{types.stringify(o, types.FormatType.ZQL, allocator.*) catch unreachable});
+        }
         return .disarm;
     }
 

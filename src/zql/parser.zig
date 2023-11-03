@@ -5,12 +5,7 @@ const lex = @import("lexer.zig");
 const err = @import("errors.zig");
 const collection = @import("../collection.zig");
 const cmds = @import("commands.zig");
-
-pub fn strdup(buff: []u8, allocator: std.mem.Allocator) ![]u8 {
-    var target = try allocator.alloc(u8, buff.len);
-    @memcpy(target, buff);
-    return target;
-}
+const utils = @import("../utils.zig");
 
 pub const Parser = struct {
     db: *collection.Collection,
@@ -69,7 +64,7 @@ pub const Parser = struct {
             return null;
         }
 
-        return self.init_value(.{ .String = try strdup(tok.text, allocator) }, allocator);
+        return self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator);
     }
 
     fn parse_primitive_value(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) anyerror!?*types.Value { 
@@ -78,7 +73,7 @@ pub const Parser = struct {
                 return try self.test_identifier(tok, allocator);
             },
             lex.TokenTypes.string => {
-                return try self.init_value(.{ .String = try strdup(tok.text, allocator) }, allocator);
+                return try self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator);
             },
             lex.TokenTypes.int => {
                 return try self.init_value(.{ .Int = try std.fmt.parseInt(i64, tok.text, 10) }, allocator);
@@ -161,7 +156,7 @@ pub const Parser = struct {
                     return err.Errors.TypeError;
                 }
 
-                var obj_key = try strdup(tok.text, allocator);
+                var obj_key = try utils.strdup(tok.text, allocator);
                 defer allocator.free(obj_key);
 
                 allocator.free(tok.text);
@@ -176,6 +171,7 @@ pub const Parser = struct {
                 }   else {
                     obj_value = try self.parse_primitive_value(tok, allocator);
                 }
+
                 if (obj_value == null) {
                     obj.deinit(allocator);
                     return err.Errors.IdentifierNotExpected;
@@ -187,6 +183,9 @@ pub const Parser = struct {
                 tok = try self.lexer.parse_token(allocator);
                 if (tok.type != lex.TokenTypes.comma) {
                     try self.lexer.step_back(@intCast(tok.text.len));
+                    if (tok.type == lex.TokenTypes.string) {
+                        try self.lexer.step_back(2);
+                    }
                 }
             }
 

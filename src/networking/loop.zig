@@ -3,6 +3,7 @@ const types = @import("../types.zig");
 const std = @import("std");
 const collection = @import("../collection.zig");
 const parser = @import("../zql/parser.zig");
+const utils = @import("../utils.zig");
 
 pub const Client = struct {
     server: *Server,
@@ -30,7 +31,7 @@ pub fn on_accept(self: ?*Server, l: *xev.Loop, _: *xev.Completion, connection: x
 
     client.client.read(l, &client.completion, .{ .slice = &client.tmpbuff }, Client, client, &on_read);
 
-    return .disarm;
+    return .rearm;
 }
 
 pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
@@ -81,7 +82,7 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
         if (out) |o| {
             var str = types.stringify(o, types.FormatType.JSON, allocator.*) catch unreachable;
             allocator.free(self.?.buffer.?);
-            self.?.outbuff = std.fmt.allocPrint(allocator.*, "{}{s}", .{str.len, str}) catch {
+            self.?.outbuff = std.fmt.allocPrint(allocator.*, "2 {} {s}", .{str.len, str}) catch {
                 bozo_left(self.?);
                 return .disarm;
             };
@@ -91,7 +92,11 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             allocator.free(self.?.buffer.?);
             self.?.buffer = null;
             self.?.written = 0;
-            return .rearm;
+            self.?.outbuff = utils.strdup("0", allocator.*) catch {
+                bozo_left(self.?);
+                return .disarm;
+            };
+            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
         }
         return .disarm;
     }
@@ -109,6 +114,7 @@ pub fn on_write(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _:
     allocator.free(self.?.outbuff.?);
     self.?.buffer = null;
     self.?.written = 0;
+    @memset(self.?.tmpbuff[0..1024], 0);
     self.?.client.read(l, c, .{ .slice = &self.?.tmpbuff }, Client, self.?, &on_read);
     return .disarm;
 }

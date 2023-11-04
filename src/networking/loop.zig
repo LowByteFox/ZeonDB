@@ -78,7 +78,19 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
     }
 
     if (self.?.written >= self.?.buffer.?.len) {
-        var out = execute(self.?) catch unreachable;
+        var out = execute(self.?) catch |e| {
+            var string_ver = std.fmt.allocPrint(allocator.*, "{}", .{e}) catch {
+                bozo_left(self.?);
+                return .disarm;
+            };
+            self.?.outbuff = std.fmt.allocPrint(allocator.*, "1 {d} {s}", .{string_ver.len, string_ver}) catch {
+                bozo_left(self.?);
+                return .disarm;
+            };
+            allocator.free(string_ver);
+            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write); 
+            return .disarm;
+        };
         if (out) |o| {
             var str = types.stringify(o, types.FormatType.JSON, allocator.*) catch unreachable;
             allocator.free(self.?.buffer.?);
@@ -123,15 +135,20 @@ pub fn execute(client: *Client) !?*types.Value {
     const allocator = client.server.allocator.?;
     var parse = parser.Parser.init(client.server.db.?, client.buffer.?);
     var args = try parse.parse(allocator.*);
+    defer args.deinit();
     var shared_buffer: ?*types.Value = null;
 
     for (args.items) |*ctx| {
-        try ctx.execute(shared_buffer, allocator.*);
+        ctx.execute(shared_buffer, allocator.*) catch |e| {
+            if (shared_buffer) |shared| {
+                types.dispose(shared, allocator.*);
+            }
+            return e;
+        };
         shared_buffer = ctx.buffer;
         ctx.deinit(allocator.*);
     }
 
-    args.deinit();
     return shared_buffer;
 }
 

@@ -39,6 +39,11 @@ pub fn Trie(comptime T: type) type {
                 }
             }
 
+            if(node.data) |data| {
+                if (T == *types.Value) {
+                    types.dispose(data, allocator);
+                }
+            }
             node.data = value;
         }
 

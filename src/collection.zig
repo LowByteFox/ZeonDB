@@ -51,12 +51,14 @@ pub const Collection = struct {
             str = try allocator.realloc(str, str.len + key_str.?.len + 1);
             str[str.len - 1] = ' ';
             utils.copy_over(str, old_len, key_str.?);
+            allocator.free(key_str.?);
 
             var value = try types.stringify(self.get(key).?, format, allocator);
             old_len = str.len;
 
             str = try allocator.realloc(str, str.len + value.len + 2);
             utils.copy_over(str, old_len, value);
+            allocator.free(value);
             utils.copy_over(str, str.len - 2, ", ");
         }
 

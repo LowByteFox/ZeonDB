@@ -43,7 +43,7 @@ pub const Parser = struct {
 
                 try contexts.append(context);
             } else {
-                std.debug.print("{s}\n", .{tok.text});
+                return err.Errors.ExpectedCommandError;
             }
             allocator.free(tok.text);
             tok = try self.lexer.parse_token(allocator);

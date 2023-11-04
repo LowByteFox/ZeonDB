@@ -41,6 +41,7 @@ pub fn stringifyArray(array: *std.ArrayList(*Value), format: FormatType, allocat
         str = try allocator.realloc(str, new_size);
 
         utils.copy_over(str, old_size, stringified);
+        allocator.free(stringified);
 
         if (format == .JSON) {
             utils.copy_over(str, new_size - 2, ", ");

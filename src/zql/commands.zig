@@ -11,6 +11,7 @@ fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 
 fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     _ = allocator;
+    ctx.sweep_arg(0);
     ctx.buffer = ctx.db.get(ctx.get_arg(0).?.String).?;
 }
 

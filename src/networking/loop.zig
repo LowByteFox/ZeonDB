@@ -8,6 +8,7 @@ pub const Client = struct {
     server: *Server,
     tmpbuff: [1024]u8,
     buffer: ?[:0]u8,
+    outbuff: ?[]u8,
     written: usize,
     client: xev.TCP,
     completion: xev.Completion,
@@ -24,6 +25,7 @@ pub fn on_accept(self: ?*Server, l: *xev.Loop, _: *xev.Completion, connection: x
     client.completion = undefined;
     client.tmpbuff = undefined;
     client.buffer = null;
+    client.outbuff = null;
     client.written = 0;
 
     client.client.read(l, &client.completion, .{ .slice = &client.tmpbuff }, Client, client, &on_read);
@@ -32,8 +34,6 @@ pub fn on_accept(self: ?*Server, l: *xev.Loop, _: *xev.Completion, connection: x
 }
 
 pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
-    _ = c;
-    _ = l;
     var bytes_read = r catch {
         bozo_left(self.?);
         return .disarm;
@@ -49,6 +49,11 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             }
             i += 1;
         }
+
+        if (i == 0) {
+            return .rearm;
+        }
+
         var len = std.fmt.parseInt(usize, self.?.tmpbuff[0..i], 10) catch {
             bozo_left(self.?);
             return .disarm;
@@ -74,12 +79,30 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
     if (self.?.written >= self.?.buffer.?.len) {
         var out = execute(self.?) catch unreachable;
         if (out) |o| {
-            std.debug.print("{s}\n", .{types.stringify(o, types.FormatType.ZQL, allocator.*) catch unreachable});
+            var str = types.stringify(o, types.FormatType.JSON, allocator.*) catch unreachable;
+            allocator.free(self.?.buffer.?);
+            self.?.outbuff = str;
+            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
+        } else {
+            bozo_left(self.?);
         }
         return .disarm;
     }
 
     return .rearm;
+}
+
+pub fn on_write(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, r: xev.TCP.WriteError!usize) xev.CallbackAction {
+    _ = r catch {
+        bozo_left(self.?);
+        return .disarm;
+    };
+
+    const allocator = self.?.server.allocator.?;
+    allocator.free(self.?.outbuff.?);
+    self.?.buffer = null;
+    self.?.client.read(l, c, .{ .slice = &self.?.tmpbuff }, Client, self.?, &on_read);
+    return .disarm;
 }
 
 pub fn execute(client: *Client) !?*types.Value {

@@ -1,7 +1,4 @@
-[output]
 format = "JSON" # ZQL | JSON
-binary_format = "array" # raw | array
-
 
 # compression -> gzip | xz | lzma | zstd
 # bundle -> combine persisted data into single archive ideal for backups and migration

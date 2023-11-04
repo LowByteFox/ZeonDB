@@ -2,9 +2,7 @@ const std = @import("std");
 const toml = @import("ztoml");
 const utils = @import("utils.zig");
 
-const default_config = \\[output]
-                       \\format = "JSON"
-                       \\binary_format = "array"
+const default_config = \\format = "JSON"
                        \\
                        \\[persistence]
                        \\enable = false
@@ -29,10 +27,7 @@ const default_config = \\[output]
                        ;
 
 const Config = struct {
-    output: ?struct {
-        format: []const u8, // ZQL | JSON
-        binary_format: []const u8 // raw | array
-    },
+    format: []const u8, // ZQL | JSON
     persistence: ?struct {
         enable: bool,
         compression: ?[]const u8, // gzip | xz | lzma | zstd

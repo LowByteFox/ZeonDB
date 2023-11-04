@@ -30,7 +30,7 @@ pub fn on_accept(self: ?*Server, l: *xev.Loop, _: *xev.Completion, connection: x
 
     client.client.read(l, &client.completion, .{ .slice = &client.tmpbuff }, Client, client, &on_read);
 
-    return .rearm;
+    return .disarm;
 }
 
 pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
@@ -81,10 +81,17 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
         if (out) |o| {
             var str = types.stringify(o, types.FormatType.JSON, allocator.*) catch unreachable;
             allocator.free(self.?.buffer.?);
-            self.?.outbuff = str;
+            self.?.outbuff = std.fmt.allocPrint(allocator.*, "{}{s}", .{str.len, str}) catch {
+                bozo_left(self.?);
+                return .disarm;
+            };
+            allocator.free(str);
             self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
         } else {
-            bozo_left(self.?);
+            allocator.free(self.?.buffer.?);
+            self.?.buffer = null;
+            self.?.written = 0;
+            return .rearm;
         }
         return .disarm;
     }
@@ -101,6 +108,7 @@ pub fn on_write(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _:
     const allocator = self.?.server.allocator.?;
     allocator.free(self.?.outbuff.?);
     self.?.buffer = null;
+    self.?.written = 0;
     self.?.client.read(l, c, .{ .slice = &self.?.tmpbuff }, Client, self.?, &on_read);
     return .disarm;
 }

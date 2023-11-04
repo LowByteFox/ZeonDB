@@ -15,8 +15,7 @@ pub fn main() !void {
     var parsed = try config.load_config(allocator);
     defer parsed.deinit();
 
-
-    var server = try network.Server.init(6969);
+    var server = try network.Server.init(6748);
     defer server.deinit();
 
     try server.run(&db, &allocator);

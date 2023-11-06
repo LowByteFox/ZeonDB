@@ -19,7 +19,9 @@ pub const TokenTypes = enum {
 
 pub const Token = struct {
     type: TokenTypes,
-    text: []u8,
+    text: []const u8,
+    col: usize,
+    line: usize,
 };
 
 pub const LexerError = error {
@@ -28,8 +30,10 @@ pub const LexerError = error {
 
 pub const Lexer = struct {
     str: [:0]const u8,
-    pos: i32,
+    pos: usize,
     len: usize,
+    col: usize,
+    line: usize,
 
     pub fn init(code: [:0]const u8) Lexer {
         return Lexer {
@@ -40,18 +44,24 @@ pub const Lexer = struct {
     }
 
     fn read_char(self: *Lexer) u8 {
-        if (self.pos - 1 == self.len) return 0;
-        const ret = self.str[@intCast(self.pos)];
+        var pos: i64 = @intCast(self.pos);
+        if (pos - 1 == self.len) return 0;
+        const ret = self.str[self.pos];
         self.pos += 1;
+        self.col += 1;
 
         return ret;
     }
 
-    pub fn step_back(self: *Lexer, len: i32) LexerError!void {
+    pub fn step_back(self: *Lexer, len: usize) LexerError!void {
         if (self.pos - len < 0) {
             return LexerError.CannotGoBackwards;
         }
         self.pos -= len;
+        if (self.str[self.pos] == '\n') {
+            self.col = 0;
+            self.line -= 1;
+        }
     }
 
     fn skip_blank(self: *Lexer) !void {
@@ -59,6 +69,11 @@ pub const Lexer = struct {
         while (current == ' ' or current == '\t' or current == '\n') {
             current = self.read_char();
         }
+        if (current == '\n') {
+            self.col = 0;
+            self.line += 1;
+        }
+
         if (current == 0) {
             return;
         }
@@ -74,47 +89,47 @@ pub const Lexer = struct {
         while (current != '\n') {
             current = self.read_char();
         }
+        self.col = 0;
+        self.line += 1;
     }
 
-    fn tokenize_identifier(self: *Lexer, allocator: std.mem.Allocator) !Token {
+    fn tokenize_identifier(self: *Lexer) !Token {
         var tok: Token = undefined;
         tok.type = TokenTypes.identifier;
+        tok.col = self.col;
+        tok.line = self.line;
 
-        var str: []u8 = try allocator.alloc(u8, 1);
+        const start = self.pos;
         var current: u8 = self.read_char();
 
         while (std.ascii.isDigit(current) or std.ascii.isAlphabetic(current) or current == '_' or current == '$') {
-            str[str.len - 1] = current;
-            str = try allocator.realloc(str, str.len + 1);
             current = self.read_char();
         }
 
-        str = try allocator.realloc(str, str.len - 1);
-
         try self.step_back(1);
-        tok.text = str;
+        tok.text = self.str[start..self.pos];
 
-        if (str.len == 4 and std.mem.eql(u8, "true", str)) {
+        if (tok.text.len == 4 and std.mem.eql(u8, "true", tok.text)) {
             tok.type = TokenTypes.bool;
-        } else if (str.len == 5 and std.mem.eql(u8, "false", str)) {
+        } else if (tok.text.len == 5 and std.mem.eql(u8, "false", tok.text)) {
             tok.type = TokenTypes.bool;
         }
 
         return tok;
     }
 
-    fn tokenize_number(self: *Lexer, allocator: std.mem.Allocator) !Token {
+    fn tokenize_number(self: *Lexer) !Token {
         var tok: Token = undefined;
         tok.type = TokenTypes.int;
+        tok.col = self.col;
+        tok.line = self.line;
 
-        var str: [] u8 = try allocator.alloc(u8, 1);
         var is_float: bool = false;
+        const start = self.pos;
 
         var current = self.read_char();
 
         while (std.ascii.isDigit(current) or current == '.') {
-            str[str.len - 1] = current;
-            str = try allocator.realloc(str, str.len + 1);
             current = self.read_char();
             if (current == '.') {
                 is_float = true;
@@ -122,9 +137,9 @@ pub const Lexer = struct {
             }
             if (current == '.' and is_float) break;
         }
-        str = try allocator.realloc(str, str.len - 1);
+
         try self.step_back(1);
-        tok.text = str;
+        tok.text = self.str[start..self.pos];
 
         if (is_float) {
             tok.type = TokenTypes.float;
@@ -133,104 +148,123 @@ pub const Lexer = struct {
         return tok;
     }
 
-    fn tokenize_string(self: *Lexer, to_end: u8, allocator: std.mem.Allocator) !Token {
+    fn tokenize_string(self: *Lexer, to_end: u8) !Token {
         var tok: Token = undefined;
         tok.type = TokenTypes.string;
- 
-        var str: [] u8 = try allocator.alloc(u8, 1);
+        tok.line = self.line;
+        tok.col = self.col;
+
+        const start = self.pos;
 
         var current = self.read_char();
         while (true) {
             var next: u8 = self.read_char();
             if (current == 0) break;
             if (current == '\\' and next == to_end) {
-                str[str.len - 1] = to_end;
-                str = try allocator.realloc(str, str.len + 1);
-                str[str.len - 1] = to_end;
                 current = self.read_char();
                 continue;
             }
             try self.step_back(1);
             if (current == to_end) break;
-            str[str.len - 1] = current;
-            str = try allocator.realloc(str, str.len + 1);
             current = self.read_char();
         }
-        str = try allocator.realloc(str, str.len - 1);
-        tok.text = str;
+        tok.text = self.str[start..self.pos];
 
         return tok;
     }
 
-    pub fn parse_token(self: *Lexer, allocator: std.mem.Allocator) !Token {
+    pub fn parse_token(self: *Lexer) !Token {
         try self.skip_blank();
         const tok = self.read_char();
 
         if (tok == 0) {
+            defer self.col += 1;
             return Token{
                 .type = TokenTypes.eof,
-                .text = try utils.strdup("EOF", allocator)
+                .text = "EOF",
+                .line = self.line,
+                .col = self.col
             };
         }
 
         switch (tok) {
             '"', '\'' => {
-                return try self.tokenize_string(tok, allocator);
+                return try self.tokenize_string(tok);
             },
             ':' => {
+                defer self.col += 1;
                 return Token{
-                    .text = try utils.strdup(":", allocator),
-                    .type = TokenTypes.colon
+                    .text = ":",
+                    .type = TokenTypes.colon,
+                    .col = self.col,
+                    .line = self.line,
                 };
             },
             ',' => {
+                defer self.col += 1;
                 return Token{
-                    .text = try utils.strdup(",", allocator),
-                    .type = TokenTypes.comma
+                    .text = ",",
+                    .type = TokenTypes.comma,
+                    .col = self.col,
+                    .line = self.line,
                 };
             },
             '[' => {
+                defer self.col += 1;
                 return Token{
-                    .text = try utils.strdup("[", allocator),
-                    .type = TokenTypes.lsquarebracket
+                    .text = "[",
+                    .type = TokenTypes.lsquarebracket,
+                    .col = self.col,
+                    .line = self.line,
                 };
             },
             ']' => {
+                defer self.col += 1;
                 return Token{
-                    .text = try utils.strdup("]", allocator),
-                    .type = TokenTypes.rsquarebracket
+                    .text = "]",
+                    .type = TokenTypes.rsquarebracket,
+                    .col = self.col,
+                    .line = self.line,
                 };
             },
             '{' => {
+                defer self.col += 1;
                 return Token{
-                    .text = try utils.strdup("{", allocator),
-                    .type = TokenTypes.lsquiglybracket
+                    .text = "{",
+                    .type = TokenTypes.lsquiglybracket,
+                    .col = self.col,
+                    .line = self.line,
                 };
             },
             '}' => {
+                defer self.col += 1;
                 return Token{
-                    .text = try utils.strdup("}", allocator),
-                    .type = TokenTypes.rsquiglybracket
+                    .text = "}",
+                    .type = TokenTypes.rsquiglybracket,
+                    .col = self.col,
+                    .line = self.line,
                 };
             },
             '-' => {
                 try self.skip_comment();
-                return self.parse_token(allocator);
+                return self.parse_token();
             },
             else => {}
         }
 
         if (std.ascii.isAlphabetic(tok) or tok == '_') {
             try self.step_back(1);
-            return try self.tokenize_identifier(allocator);
+            return try self.tokenize_identifier();
         } else if (std.ascii.isDigit(tok)) {
             try self.step_back(1);
-            return try self.tokenize_number(allocator);
+            return try self.tokenize_number();
         } else {
-            std.debug.print("{any}\n", .{tok});
+            defer self.col += 1;
             return Token{
-                .text = try utils.strdup("ILL", allocator),
-                .type = TokenTypes.illegal
+                .text = "ILL",
+                .type = TokenTypes.illegal,
+                .col = self.col,
+                .line = self.line,
             };
         }
     }

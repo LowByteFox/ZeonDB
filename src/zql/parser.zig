@@ -21,8 +21,7 @@ pub const Parser = struct {
     pub fn parse(self: *@This(), allocator: std.mem.Allocator) !std.ArrayList(ctx.ZqlContext) {
         var contexts = std.ArrayList(ctx.ZqlContext).init(allocator);
         
-        var tok = try self.lexer.parse_token(allocator);
-        defer allocator.free(tok.text);
+        var tok = try self.lexer.parse_token();
 
         if (tok.type != lex.TokenTypes.identifier) {
             return err.Errors.ExpectedCommandError;
@@ -45,8 +44,7 @@ pub const Parser = struct {
             } else {
                 return err.Errors.ExpectedCommandError;
             }
-            allocator.free(tok.text);
-            tok = try self.lexer.parse_token(allocator);
+            tok = try self.lexer.parse_token();
         }
 
         return contexts;
@@ -100,19 +98,17 @@ pub const Parser = struct {
         }
     }
 
-    fn parse_value(self: *@This(), allocator: std.mem.Allocator) !*types.Value {
-        var tok = try self.lexer.parse_token(allocator);
-        defer allocator.free(tok.text);
+    fn parse_value(self: *@This(), allocator: std.mem.Allocator) !*ctx.ZqlTrace {
+        var tok = try self.lexer.parse_token();
         if (tok.type == lex.TokenTypes.eof) {
-            return err.Errors.GotEofError;
+            return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got EOF!", .{tok.line, tok.col}) };
         }
 
         if (tok.type == lex.TokenTypes.lsquarebracket) {
             var value_array = std.ArrayList(*types.Value).init(allocator);
 
             while (true) {
-                allocator.free(tok.text);
-                tok = try self.lexer.parse_token(allocator);
+                tok = try self.lexer.parse_token();
                 if (tok.type == lex.TokenTypes.rsquarebracket) {
                     break;
                 } else if (tok.type == lex.TokenTypes.comma) {
@@ -122,7 +118,7 @@ pub const Parser = struct {
                         types.dispose(item, allocator);
                     }
                     value_array.deinit();
-                    return err.Errors.GotEofError;
+                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected , or ] at {}:{} but got EOF!", .{tok.line, tok.col}) };
                 }
 
                 var array_val: ?*types.Value = try self.parse_primitive_value(tok, allocator);
@@ -133,19 +129,18 @@ pub const Parser = struct {
                     }
                     value_array.deinit();
 
-                    return err.Errors.IdentifierNotExpected;
+                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got EOF!", .{tok.line, tok.col}) };
                 }
 
                 try value_array.append(array_val.?);
             }
 
-            return try self.init_value(.{ .Array = value_array }, allocator);
+            return .{ .value = try self.init_value(.{ .Array = value_array }, allocator), .err = null };
         } else if (tok.type == lex.TokenTypes.lsquiglybracket) {
             var obj = try collection.Collection.init(allocator);
 
             while (true) {
-                allocator.free(tok.text);
-                tok = try self.lexer.parse_token(allocator);
+                tok = try self.lexer.parse_token();
                 if (tok.type == lex.TokenTypes.rsquiglybracket) {
                     break;
                 }
@@ -153,20 +148,18 @@ pub const Parser = struct {
                 if (tok.type != lex.TokenTypes.string and
                     tok.type != lex.TokenTypes.identifier) {
                     obj.deinit(allocator);
-                    return err.Errors.TypeError;
+                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected String or Identifier but got {} at {}:{}!", .{tok.type, tok.line, tok.col}) };
                 }
 
                 var obj_key = try utils.strdup(tok.text, allocator);
                 defer allocator.free(obj_key);
 
-                allocator.free(tok.text);
-                tok = try self.lexer.parse_token(allocator);
+                tok = try self.lexer.parse_token();
 
                 var obj_value: ?*types.Value = null;
 
                 if (tok.type == lex.TokenTypes.colon) {
-                    allocator.free(tok.text);
-                    tok = try self.lexer.parse_token(allocator);
+                    tok = try self.lexer.parse_token();
                     obj_value = try self.parse_primitive_value(tok, allocator);
                 }   else {
                     obj_value = try self.parse_primitive_value(tok, allocator);
@@ -174,13 +167,12 @@ pub const Parser = struct {
 
                 if (obj_value == null) {
                     obj.deinit(allocator);
-                    return err.Errors.IdentifierNotExpected;
+                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got {} instead!", .{tok.line, tok.col, tok.type}) };
                 }
 
                 try obj.add(obj_key, obj_value.?, allocator);
 
-                allocator.free(tok.text);
-                tok = try self.lexer.parse_token(allocator);
+                tok = try self.lexer.parse_token();
                 if (tok.type != lex.TokenTypes.comma) {
                     try self.lexer.step_back(@intCast(tok.text.len));
                     if (tok.type == lex.TokenTypes.string) {
@@ -189,15 +181,15 @@ pub const Parser = struct {
                 }
             }
 
-            return try self.init_value(.{ .Collection = obj }, allocator);
+            return .{ .value = try self.init_value(.{ .Collection = obj }, allocator), .err = null };
         }
 
         var val: ?*types.Value = try self.parse_primitive_value(tok, allocator);
 
         if (val != null) {
-            return val.?;
+            return .{ .value = val.?, .err = null };
         }
 
-        return err.Errors.IdentifierNotExpected;
+        return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got {} instead!", .{tok.line, tok.col, tok.type}) };
     }
 };

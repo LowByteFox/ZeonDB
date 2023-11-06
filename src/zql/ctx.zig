@@ -1,6 +1,7 @@
 const std = @import("std");
 const types = @import("../types.zig");
 const collection = @import("../collection.zig");
+const err = @import("errors.zig");
 
 pub const ZqlFunc = *const fn (ctx: *ZqlContext, allocator: std.mem.Allocator) anyerror!void;
 
@@ -13,19 +14,27 @@ pub const MarkToSweep = struct {
     ptr: *types.Value,
 };
 
+pub const ZqlTrace = struct {
+    value: ?*types.Value,
+    err: ?[]u8,
+};
+
 // ZqlContext is used to hold context data for a function
+// or exception if happened
 pub const ZqlContext = struct {
     db: *collection.Collection,
     args: std.ArrayList(MarkToSweep),
     func: ?ZqlFunc,
     buffer: ?*types.Value,
+    err: ?[]u8,
     
     pub fn init(db: *collection.Collection, allocator: std.mem.Allocator) ZqlContext {
         return ZqlContext{
             .db = db,
             .args = std.ArrayList(MarkToSweep).init(allocator),
             .func = null,
-            .buffer = null
+            .buffer = null,
+            .err = null,
         };
     }
 
@@ -34,6 +43,9 @@ pub const ZqlContext = struct {
             if (arg.sweep) {
                 types.dispose(arg.ptr, allocator);
             }
+        }
+        if (self.err) |*e| {
+            allocator.free(e);
         }
         self.args.deinit();
     }

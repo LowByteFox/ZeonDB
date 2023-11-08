@@ -4,8 +4,8 @@
     .paths = .{"libs"},
     .dependencies = .{
         .libxev = .{
-            .url = "https://github.com/mitchellh/libxev/archive/1b46c2d6f32754a3029d1863275dd0f877163831.tar.gz",
-            .hash = "12208dc0796bffa6ea9edb60193108e34f835f35fc152e853717aca2b13ba17f3be2",
+            .url = "https://github.com/mitchellh/libxev/archive/04f21b9af5c5412bb80f2dd2b670398800f31209.tar.gz",
+            .hash = "122066c6617bd0c106280eaf6bf7a8169c197cec7b97d35c5add1d3439b65984cefa",
         },
     },
 }

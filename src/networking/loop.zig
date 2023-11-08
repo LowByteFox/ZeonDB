@@ -4,6 +4,7 @@ const std = @import("std");
 const collection = @import("../collection.zig");
 const parser = @import("../zql/parser.zig");
 const utils = @import("../utils.zig");
+const ctx = @import("../zql/ctx.zig");
 
 pub const Client = struct {
     server: *Server,
@@ -91,8 +92,18 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write); 
             return .disarm;
         };
-        if (out) |o| {
-            var str = types.stringify(o, types.FormatType.JSON, allocator.*) catch unreachable;
+        if (out.err) |e| {
+            allocator.free(self.?.buffer.?);
+            self.?.outbuff = std.fmt.allocPrint(allocator.*, "1 {d} {s}", .{e.len, e}) catch {
+                bozo_left(self.?);
+                return .disarm;
+            };
+            allocator.free(e);
+            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write); 
+            return .disarm;
+        }
+        if (out.value) |v| {
+            var str = types.stringify(v, types.FormatType.JSON, allocator.*) catch unreachable;
             allocator.free(self.?.buffer.?);
             self.?.outbuff = std.fmt.allocPrint(allocator.*, "2 {} {s}", .{str.len, str}) catch {
                 bozo_left(self.?);
@@ -100,20 +111,19 @@ pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: 
             };
             allocator.free(str);
             self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
-        } else {
-            allocator.free(self.?.buffer.?);
-            self.?.buffer = null;
-            self.?.written = 0;
-            self.?.outbuff = utils.strdup("0", allocator.*) catch {
-                bozo_left(self.?);
-                return .disarm;
-            };
-            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
+            return .disarm;
         }
-        return .disarm;
-    }
 
-    return .rearm;
+        allocator.free(self.?.buffer.?);
+        self.?.buffer = null;
+        self.?.written = 0;
+        self.?.outbuff = utils.strdup("0", allocator.*) catch {
+            bozo_left(self.?);
+            return .disarm;
+        };
+        self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
+    }
+    return .disarm;
 }
 
 pub fn on_write(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, r: xev.TCP.WriteError!usize) xev.CallbackAction {
@@ -131,25 +141,31 @@ pub fn on_write(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _:
     return .disarm;
 }
 
-pub fn execute(client: *Client) !?*types.Value {
+pub fn execute(client: *Client) !ctx.ZqlTrace {
     const allocator = client.server.allocator.?;
     var parse = parser.Parser.init(client.server.db.?, client.buffer.?);
     var args = try parse.parse(allocator.*);
     defer args.deinit();
     var shared_buffer: ?*types.Value = null;
 
-    for (args.items) |*ctx| {
-        ctx.execute(shared_buffer, allocator.*) catch |e| {
+    for (args.items) |*context| {
+        defer context.deinit(allocator.*);
+        var err = context.execute(shared_buffer, allocator.*) catch |e| {
             if (shared_buffer) |shared| {
                 types.dispose(shared, allocator.*);
             }
             return e;
         };
-        shared_buffer = ctx.buffer;
-        ctx.deinit(allocator.*);
+        if (err) |e| {
+            return .{ .value = null, .err = e };
+        }
+        if (context.err) |e| {
+            return .{ .value = null, .err = e };
+        }
+        shared_buffer = context.buffer;
     }
 
-    return shared_buffer;
+    return .{ .value = shared_buffer, .err = null };
 }
 
 pub fn bozo_left(bozo: *Client) void {

@@ -39,7 +39,9 @@ pub const Lexer = struct {
         return Lexer {
             .str = code,
             .pos = 0,
-            .len = code.len
+            .len = code.len,
+            .col = 1,
+            .line = 1,
         };
     }
 
@@ -58,6 +60,7 @@ pub const Lexer = struct {
             return LexerError.CannotGoBackwards;
         }
         self.pos -= len;
+        self.col -= len;
         if (self.str[self.pos] == '\n') {
             self.col = 0;
             self.line -= 1;
@@ -178,7 +181,6 @@ pub const Lexer = struct {
         const tok = self.read_char();
 
         if (tok == 0) {
-            defer self.col += 1;
             return Token{
                 .type = TokenTypes.eof,
                 .text = "EOF",
@@ -192,7 +194,6 @@ pub const Lexer = struct {
                 return try self.tokenize_string(tok);
             },
             ':' => {
-                defer self.col += 1;
                 return Token{
                     .text = ":",
                     .type = TokenTypes.colon,
@@ -201,7 +202,6 @@ pub const Lexer = struct {
                 };
             },
             ',' => {
-                defer self.col += 1;
                 return Token{
                     .text = ",",
                     .type = TokenTypes.comma,
@@ -210,7 +210,6 @@ pub const Lexer = struct {
                 };
             },
             '[' => {
-                defer self.col += 1;
                 return Token{
                     .text = "[",
                     .type = TokenTypes.lsquarebracket,
@@ -219,7 +218,6 @@ pub const Lexer = struct {
                 };
             },
             ']' => {
-                defer self.col += 1;
                 return Token{
                     .text = "]",
                     .type = TokenTypes.rsquarebracket,
@@ -228,7 +226,6 @@ pub const Lexer = struct {
                 };
             },
             '{' => {
-                defer self.col += 1;
                 return Token{
                     .text = "{",
                     .type = TokenTypes.lsquiglybracket,
@@ -237,7 +234,6 @@ pub const Lexer = struct {
                 };
             },
             '}' => {
-                defer self.col += 1;
                 return Token{
                     .text = "}",
                     .type = TokenTypes.rsquiglybracket,
@@ -259,7 +255,6 @@ pub const Lexer = struct {
             try self.step_back(1);
             return try self.tokenize_number();
         } else {
-            defer self.col += 1;
             return Token{
                 .text = "ILL",
                 .type = TokenTypes.illegal,

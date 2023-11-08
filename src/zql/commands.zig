@@ -10,9 +10,13 @@ fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 }
 
 fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
-    _ = allocator;
     ctx.sweep_arg(0);
-    ctx.buffer = ctx.db.get(ctx.get_arg(0).?.String).?;
+    var val = ctx.db.get(ctx.get_arg(0).?.String);
+    if (val) |v| {
+        ctx.buffer = v;
+    } else {
+        ctx.err = try std.fmt.allocPrint(allocator, "No such key \"{s}\"!", .{ctx.get_arg(0).?.String});
+    }
 }
 
 pub const commands = std.ComptimeStringMap(context.ZqlCmd, .{

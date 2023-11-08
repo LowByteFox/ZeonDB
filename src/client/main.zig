@@ -7,6 +7,14 @@ pub fn copy_over(buff: []u8, start: usize, str: []const u8) void {
     }
 }
 
+pub fn strdup(buff: []const u8, allocator: std.mem.Allocator) ![]u8 {
+    var target = try allocator.alloc(u8, buff.len);
+    @memcpy(target, buff);
+    return target;
+}
+
+var last_in: []u8 = undefined;
+
 const Data = struct {
     allocator: *const std.mem.Allocator,
     tmpbuff: [1024]u8,
@@ -14,7 +22,25 @@ const Data = struct {
     connection: xev.TCP,
     read: xev.Completion,
     written: usize,
+    status: i8,
 };
+
+fn getcol(begin: usize, str: []const u8) i32 {
+    var start: usize = 0;
+    var end: usize = 0;
+    for (begin..str.len) |i| {
+        if (str[i] == ':') {
+            start = i + 1;
+            end = i + 1;
+            while (std.ascii.isDigit(str[end])) { 
+                end += 1;
+            }
+            break;
+        }
+    }
+
+    return std.fmt.parseInt(i8, str[start..end], 10) catch -1;
+}
 
 fn getin(allocator: std.mem.Allocator) ![]u8 {
     const stdin = std.io.getStdIn().reader();
@@ -65,12 +91,13 @@ fn on_connect(allocator: ?*std.mem.Allocator, l: *xev.Loop, c: *xev.Completion, 
     data.buffer = null;
     data.connection = server;
     data.written = 0;
+    data.status = -1;
 
     std.debug.print("> ", .{});
 
     var in = getin(data.allocator.*) catch unreachable;
     data.buffer = std.fmt.allocPrint(data.allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-    allocator.?.free(in);
+    last_in = in;
 
     data.connection.write(l, c, .{ .slice = data.buffer.? }, Data, data, &on_write);
 
@@ -78,7 +105,6 @@ fn on_connect(allocator: ?*std.mem.Allocator, l: *xev.Loop, c: *xev.Completion, 
 }
 
 pub fn on_read(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
-
     var bytes_read = r catch unreachable;
 
     const allocator = ud.?.allocator;
@@ -88,12 +114,15 @@ pub fn on_read(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.
             return .disarm;
         };
 
+        ud.?.status = status;
+
         if (status == 0) {
             std.debug.print("> ", .{});
 
             var in = getin(allocator.*) catch unreachable;
             ud.?.buffer = std.fmt.allocPrint(allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-            allocator.free(in);
+            allocator.free(last_in);
+            last_in = in;
             ud.?.tmpbuff = undefined;
             ud.?.written = 0;
 
@@ -131,12 +160,26 @@ pub fn on_read(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.
     }
 
     if (ud.?.written >= ud.?.buffer.?.len) {
-        std.debug.print("{s}\n", .{ud.?.buffer.?});
+        if (ud.?.status == 1) {
+            var col = getcol(0, ud.?.buffer.?);
+            std.debug.print("{s}\n", .{ud.?.buffer.?});
+            if (col > 0) {
+                col -= 1;
+                std.debug.print("{s}\n", .{last_in});
+                for (0..@intCast(col)) |_| {
+                    std.debug.print(" ", .{});
+                }
+                std.debug.print("^\n", .{});
+            }
+        } else {
+            std.debug.print("{s}\n", .{ud.?.buffer.?});
+        }
         std.debug.print("> ", .{});
 
         var in = getin(allocator.*) catch unreachable;
         ud.?.buffer = std.fmt.allocPrint(allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-        allocator.free(in);
+        allocator.free(last_in);
+        last_in = in;
         ud.?.tmpbuff = undefined;
         ud.?.written = 0;
 

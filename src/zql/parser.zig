@@ -31,8 +31,7 @@ pub const Parser = struct {
             if (cmds.commands.get(tok.text)) |command| {
                 var context = ctx.ZqlContext.init(self.db, allocator);
 
-                for (0..@intCast(command.arg_count)) |i| {
-                    _ = i;
+                for (0..@intCast(command.arg_count)) |_| {
                     var arg = try self.parse_value(allocator);
 
                     try context.add_arg(arg);
@@ -42,7 +41,11 @@ pub const Parser = struct {
 
                 try contexts.append(context);
             } else {
-                return err.Errors.ExpectedCommandError;
+                var context = ctx.ZqlContext.init(self.db, allocator);
+                try context.add_arg(try self.init_trace_err(try std.fmt.allocPrint(allocator, "Invalid command or unexpected token at {}:{}!", .{tok.line, tok.col}), allocator));
+
+                try contexts.append(context);
+                return contexts;
             }
             tok = try self.lexer.parse_token();
         }
@@ -57,27 +60,43 @@ pub const Parser = struct {
         return v;
     }
 
-    fn test_identifier(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) !?*types.Value {
+    fn init_trace_val(self: *@This(), val: *types.Value, allocator: std.mem.Allocator) !*ctx.ZqlTrace {
+        _ = self;
+        var v = try allocator.create(ctx.ZqlTrace);
+        v.value = val;
+        v.err = null;
+        return v;
+    }
+
+    fn init_trace_err(self: *@This(), error_msg: []u8, allocator: std.mem.Allocator) !*ctx.ZqlTrace {
+        _ = self;
+        var v = try allocator.create(ctx.ZqlTrace);
+        v.value = null;
+        v.err = error_msg;
+        return v;
+    }
+
+    fn test_identifier(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) !?*ctx.ZqlTrace {
         if (cmds.commands.has(tok.text)) {
             return null;
         }
 
-        return self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator);
+        return try self.init_trace_val(try self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator), allocator);
     }
 
-    fn parse_primitive_value(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) anyerror!?*types.Value { 
+    fn parse_primitive_value(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) anyerror!?*ctx.ZqlTrace { 
         switch(tok.type) {
             lex.TokenTypes.identifier => {
                 return try self.test_identifier(tok, allocator);
             },
             lex.TokenTypes.string => {
-                return try self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator);
+                return try self.init_trace_val(try self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator), allocator);
             },
             lex.TokenTypes.int => {
-                return try self.init_value(.{ .Int = try std.fmt.parseInt(i64, tok.text, 10) }, allocator);
+                return try self.init_trace_val(try self.init_value(.{ .Int = try std.fmt.parseInt(i64, tok.text, 10) }, allocator), allocator);
             },
             lex.TokenTypes.float => {
-                return try self.init_value(.{ .Float = try std.fmt.parseFloat(f64, tok.text) }, allocator);
+                return try self.init_trace_val(try self.init_value(.{ .Float = try std.fmt.parseFloat(f64, tok.text) }, allocator), allocator);
             },
             lex.TokenTypes.bool => {
                 var bool_val = false;
@@ -86,7 +105,7 @@ pub const Parser = struct {
                     bool_val = true;
                 }
 
-                return try self.init_value(.{ .Bool = bool_val }, allocator);
+                return try self.init_trace_val(try self.init_value(.{ .Bool = bool_val }, allocator), allocator);
             },
             lex.TokenTypes.lsquarebracket, lex.TokenTypes.lsquiglybracket => {
                 try self.lexer.step_back(1);
@@ -101,7 +120,7 @@ pub const Parser = struct {
     fn parse_value(self: *@This(), allocator: std.mem.Allocator) !*ctx.ZqlTrace {
         var tok = try self.lexer.parse_token();
         if (tok.type == lex.TokenTypes.eof) {
-            return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got EOF!", .{tok.line, tok.col}) };
+            return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected value at {}:{} but got EOF!", .{tok.line, tok.col}), allocator);
         }
 
         if (tok.type == lex.TokenTypes.lsquarebracket) {
@@ -118,10 +137,22 @@ pub const Parser = struct {
                         types.dispose(item, allocator);
                     }
                     value_array.deinit();
-                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected , or ] at {}:{} but got EOF!", .{tok.line, tok.col}) };
+                    return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected , or ] at {}:{} but got EOF!", .{tok.line, tok.col}), allocator);
                 }
 
-                var array_val: ?*types.Value = try self.parse_primitive_value(tok, allocator);
+                var array_val = try self.parse_primitive_value(tok, allocator);
+
+                if (array_val == null) {
+                    for (value_array.items) |item| {
+                        types.dispose(item, allocator);
+                    }
+                    value_array.deinit();
+                    return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected value at {}:{} but got {} instead!", .{tok.line, tok.col, tok.type}), allocator);
+                }
+                
+                if (array_val.?.err) |_| {
+                    return array_val.?;
+                }
 
                 if (array_val == null) {
                     for (value_array.items) |item| {
@@ -129,13 +160,13 @@ pub const Parser = struct {
                     }
                     value_array.deinit();
 
-                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got EOF!", .{tok.line, tok.col}) };
+                    return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected value at {}:{} but got EOF!", .{tok.line, tok.col}), allocator);
                 }
 
-                try value_array.append(array_val.?);
+                try value_array.append(array_val.?.value.?);
             }
 
-            return .{ .value = try self.init_value(.{ .Array = value_array }, allocator), .err = null };
+            return try self.init_trace_val(try self.init_value(.{ .Array = value_array }, allocator), allocator);
         } else if (tok.type == lex.TokenTypes.lsquiglybracket) {
             var obj = try collection.Collection.init(allocator);
 
@@ -148,7 +179,7 @@ pub const Parser = struct {
                 if (tok.type != lex.TokenTypes.string and
                     tok.type != lex.TokenTypes.identifier) {
                     obj.deinit(allocator);
-                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected String or Identifier but got {} at {}:{}!", .{tok.type, tok.line, tok.col}) };
+                    return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected String or Identifier but got {} at {}:{}!", .{tok.type, tok.line, tok.col}), allocator);
                 }
 
                 var obj_key = try utils.strdup(tok.text, allocator);
@@ -156,7 +187,7 @@ pub const Parser = struct {
 
                 tok = try self.lexer.parse_token();
 
-                var obj_value: ?*types.Value = null;
+                var obj_value: ?*ctx.ZqlTrace = null;
 
                 if (tok.type == lex.TokenTypes.colon) {
                     tok = try self.lexer.parse_token();
@@ -167,10 +198,13 @@ pub const Parser = struct {
 
                 if (obj_value == null) {
                     obj.deinit(allocator);
-                    return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got {} instead!", .{tok.line, tok.col, tok.type}) };
+                    return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected value at {}:{} but got {} instead!", .{tok.line, tok.col, tok.type}), allocator);
                 }
 
-                try obj.add(obj_key, obj_value.?, allocator);
+                if (obj_value.?.err) |_| {
+                    return obj_value.?;
+                }
+                try obj.add(obj_key, obj_value.?.value.?, allocator);
 
                 tok = try self.lexer.parse_token();
                 if (tok.type != lex.TokenTypes.comma) {
@@ -181,15 +215,19 @@ pub const Parser = struct {
                 }
             }
 
-            return .{ .value = try self.init_value(.{ .Collection = obj }, allocator), .err = null };
+            return try self.init_trace_val(try self.init_value(.{ .Collection = obj }, allocator), allocator);
         }
 
-        var val: ?*types.Value = try self.parse_primitive_value(tok, allocator);
+        var val = try self.parse_primitive_value(tok, allocator);
 
         if (val != null) {
-            return .{ .value = val.?, .err = null };
+            if (val.?.err) |_| {
+                return val.?;
+            }
+
+            return val.?;
         }
 
-        return .{ .value = null, .err = std.fmt.allocPrint(allocator, "Expected value at {}:{} but got {} instead!", .{tok.line, tok.col, tok.type}) };
+        return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected value at {}:{} but got {} instead!", .{tok.line, tok.col, tok.type}), allocator);
     }
 };

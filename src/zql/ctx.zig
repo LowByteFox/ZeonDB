@@ -11,7 +11,7 @@ pub const ZqlContextErr = error {
 
 pub const MarkToSweep = struct {
     sweep: bool,
-    ptr: *types.Value,
+    ptr: *ZqlTrace,
 };
 
 pub const ZqlTrace = struct {
@@ -41,23 +41,21 @@ pub const ZqlContext = struct {
     pub fn deinit(self: *ZqlContext, allocator: std.mem.Allocator) void {
         for (self.args.items) |arg| {
             if (arg.sweep) {
-                types.dispose(arg.ptr, allocator);
+                types.dispose(arg.ptr.value.?, allocator);
             }
-        }
-        if (self.err) |*e| {
-            allocator.free(e);
+            allocator.destroy(arg.ptr);
         }
         self.args.deinit();
     }
 
-    pub fn add_arg(self: *ZqlContext, arg: *types.Value) !void {
+    pub fn add_arg(self: *ZqlContext, arg: *ZqlTrace) !void {
         try self.args.append(.{ .ptr = arg, .sweep = false });
     }
 
     pub fn get_arg(self: *const ZqlContext, index: usize) ?*types.Value {
         if (index > self.args.items.len) return null;
 
-        return self.args.items[index].ptr;
+        return self.args.items[index].ptr.value;
     }
 
     pub fn sweep_arg(self: *ZqlContext, index: usize) void {
@@ -74,14 +72,20 @@ pub const ZqlContext = struct {
         self.func = func;
     }
 
-    pub fn execute(self: *ZqlContext, buff: ?*types.Value, allocator: std.mem.Allocator) !void {
+    pub fn execute(self: *ZqlContext, buff: ?*types.Value, allocator: std.mem.Allocator) !?[]u8 {
         if (buff) |b| {
             self.buffer = b;
         }
 
+        for (self.args.items) |a| {
+            if (a.ptr.err) |e| {
+                return e;
+            }
+        }
+
         if (self.func) |func| {
             try func(self, allocator);
-            return;
+            return null;
         }
         return ZqlContextErr.FunctionNotSet;
     }

@@ -25,6 +25,11 @@ pub const Value = union(Types) {
     Collection: collection.Collection
 };
 
+pub fn clone_value(val: *Value, allocator: std.mem.Allocator) !*Value {
+    _ = allocator;
+    _ = val;
+}
+
 pub fn stringifyArray(array: *std.ArrayList(*Value), format: FormatType, allocator: std.mem.Allocator) ![]u8 {
     var str = try utils.strdup("[", allocator);
 
@@ -49,8 +54,11 @@ pub fn stringifyArray(array: *std.ArrayList(*Value), format: FormatType, allocat
             str[str.len - 1] = ' ';
         }
     }
-    if (format == .JSON) {
+    if (str.len > 1 and format == .JSON) {
         str = try allocator.realloc(str, str.len - 1);
+    }
+    if (str.len == 1) {
+        str = try allocator.realloc(str, str.len + 1);
     }
     str[str.len - 1] = ']';
 

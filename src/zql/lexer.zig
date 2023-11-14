@@ -105,7 +105,7 @@ pub const Lexer = struct {
         const start = self.pos;
         var current: u8 = self.read_char();
 
-        while (std.ascii.isDigit(current) or std.ascii.isAlphabetic(current) or current == '_' or current == '$') {
+        while (std.ascii.isDigit(current) or std.ascii.isAlphabetic(current) or current == '_' or current == '$' or current == '.') {
             current = self.read_char();
         }
 
@@ -171,7 +171,7 @@ pub const Lexer = struct {
             if (current == to_end) break;
             current = self.read_char();
         }
-        tok.text = self.str[start..self.pos];
+        tok.text = self.str[start..self.pos - 1];
 
         return tok;
     }

@@ -169,7 +169,14 @@ pub fn on_read(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.
                 for (0..@intCast(col)) |_| {
                     std.debug.print(" ", .{});
                 }
-                std.debug.print("^\n", .{});
+                if (@as(i32, @intCast(last_in.len)) > col) {
+                    for (0..@intCast((@as(i32, @intCast(last_in.len)) - col))) |_| {
+                        std.debug.print("^", .{});
+                    }
+                } else {
+                    std.debug.print("^", .{});
+                }
+                std.debug.print("\n", .{});
             }
         } else {
             std.debug.print("{s}\n", .{ud.?.buffer.?});

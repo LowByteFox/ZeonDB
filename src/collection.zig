@@ -59,10 +59,18 @@ pub const Collection = struct {
             str = try allocator.realloc(str, str.len + value.len + 2);
             utils.copy_over(str, old_len, value);
             allocator.free(value);
-            utils.copy_over(str, str.len - 2, ", ");
+            if (format == .JSON) {
+                utils.copy_over(str, str.len - 2, ", ");
+            } else {
+                str[str.len - 1] = ' ';
+            }
         }
-
-        str = try allocator.realloc(str, str.len - 1);
+        if (str.len > 1 and format == .JSON) {
+            str = try allocator.realloc(str, str.len - 1);
+        }
+        if (str.len == 1) {
+            str = try allocator.realloc(str, str.len + 1);
+        }
         str[str.len - 1] = '}';
 
         return str;

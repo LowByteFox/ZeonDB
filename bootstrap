@@ -1,8 +1,0 @@
-#!/bin/bash
-
-mkdir -p libs
-cd libs || exit
-
-git clone https://github.com/sam701/zig-toml.git
-
-cd .. || exit

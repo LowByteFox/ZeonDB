@@ -5,9 +5,6 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
-    const toml_module = b.addModule("ztoml", .{
-        .source_file = std.Build.FileSource.relative("libs/zig-toml/src/main.zig"),
-    });
 
     const exe = b.addExecutable(.{
         .name = "ZeonDB",
@@ -23,7 +20,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.addModule("ztoml", toml_module);
+    const toml = b.dependency("zigtoml", .{ .target = target, .optimize = optimize });
+    exe.addModule("ztoml", toml.module("zig-toml"));
 
     const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
     exe.addModule("xev", xev.module("xev"));
@@ -43,7 +41,7 @@ pub fn build(b: *std.Build) void {
         run_client.addArgs(args);
     }
 
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step("server", "Start the DB");
     const run_client_step = b.step("client", "Run the client");
 
     run_client_step.dependOn(&run_client.step);

@@ -29,6 +29,8 @@ fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 
 fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     ctx.sweep_arg(0);
+    var args1 = ctx.get_arg(0).?.String;
+    _ = args1;
     var val = ctx.db.get(ctx.get_arg(0).?.String);
     if (val) |v| {
         ctx.buffer = v;

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub const Account = struct {
-    password: [64]u8,
+    password: [32]u8,
 };
 
 pub const AccountManager = struct {
@@ -13,10 +13,10 @@ pub const AccountManager = struct {
         };
     }
 
-    pub fn sha256(pass: []const u8, out: *[64]u8) void {
-        var hash = std.crypto.sha2.Sha256.init(.{});
+    pub fn sha256(pass: []const u8, out: *[32]u8) void {
+        var hash = std.crypto.hash.sha2.Sha256.init(.{});
         hash.update(pass);
-        hash.final(out[0..64]);
+        hash.final(out[0..32]);
     }
 
     pub fn register(self: *AccountManager, username: []const u8, account: Account) !void {
@@ -26,8 +26,8 @@ pub const AccountManager = struct {
     pub fn login(self: *AccountManager, username: []const u8, encrypted_password: []const u8) bool {
          const acc = self.accounts.getPtr(username);
          if (acc) |l| {
-            if (encrypted_password.len != 64) return false;
-            return std.mem.eql(u8, l.password[0..64], encrypted_password);
+            if (encrypted_password.len != 32) return false;
+            return std.mem.eql(u8, l.password[0..], encrypted_password);
          }
          return false;
     }

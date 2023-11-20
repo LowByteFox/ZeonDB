@@ -24,12 +24,17 @@ pub fn main() !void {
     var account_manager = try accounts.AccountManager.init(allocator);
     defer account_manager.deinit();
 
-    var out: [64]u8 = undefined;
-    account_manager.sha256("adamvojtko", out);
+    var out: [32]u8 = undefined;
+    accounts.AccountManager.sha256("adamvojtko", out[0..]);
     try account_manager.register("qra", .{ .password = out });
 
-    std.debug.print("{}\n", .{account_manager.login("qra", "adam")});
-    std.debug.print("{}\n", .{account_manager.login("qra", "adamuojtko")});
-    std.debug.print("{}\n", .{account_manager.login("qra", "adamvojtko")});
-    std.debug.print("{}\n", .{account_manager.login("qra", "adamvojtko123")});
+    var out2: [32]u8 = undefined;
+    accounts.AccountManager.sha256("adam", out2[0..]);
+    std.debug.print("{}\n", .{account_manager.login("qra", out2[0..])});
+    accounts.AccountManager.sha256("adamuojtko", out2[0..]);
+    std.debug.print("{}\n", .{account_manager.login("qra", out2[0..])});
+    accounts.AccountManager.sha256("adamvojtko", out2[0..]);
+    std.debug.print("{}\n", .{account_manager.login("qra", out2[0..])});
+    accounts.AccountManager.sha256("adamvojtko123", out2[0..]);
+    std.debug.print("{}\n", .{account_manager.login("qra", out2[0..])});
 }

@@ -24,7 +24,9 @@ pub fn main() !void {
     var account_manager = try accounts.AccountManager.init(allocator);
     defer account_manager.deinit();
 
-    try account_manager.register("qra", .{ .password = @ptrCast(@constCast("adamvojtko")) });
+    var out: [64]u8 = undefined;
+    account_manager.sha256("adamvojtko", out);
+    try account_manager.register("qra", .{ .password = out });
 
     std.debug.print("{}\n", .{account_manager.login("qra", "adam")});
     std.debug.print("{}\n", .{account_manager.login("qra", "adamuojtko")});

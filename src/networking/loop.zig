@@ -39,6 +39,15 @@ pub fn get_frame(self: ?*client.Client, l: *xev.Loop, c: *xev.Completion, _: xev
     _ = bytes_read;
 
     self.?.frame.from_buffer();
+    switch (self.?.frame.status) {
+        .Ok => {},
+        .Auth => {
+            @panic("Soon enough");
+        },
+        else => {
+            @panic("implementing");
+        },
+    }
     _ = c;
     _ = l;
     return .disarm;

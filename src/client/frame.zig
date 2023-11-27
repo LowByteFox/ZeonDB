@@ -13,6 +13,7 @@ pub const ZeonFrame = struct {
                     @panic("Length was expected but not null!");
                 }
                 std.mem.writeInt(u64, self.fixed_buffer[1..9], length.?, std.builtin.Endian.Little);
+                self.target_length = length.?;
             },
             else => {
                 @memset(self.fixed_buffer[1..1024], 0);
@@ -29,6 +30,10 @@ pub const ZeonFrame = struct {
             else => {
             }
         }
+    }
+
+    pub fn write_buffer(self: *@This(), buffer: *[1015]u8) void {
+        @memcpy(self.fixed_buffer[9..], buffer);
     }
 };
 

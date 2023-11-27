@@ -23,6 +23,7 @@ const Zeon = struct {
     db: xev.TCP,
     completion: xev.Completion,
     transfered: u64,
+    authentificated: bool,
 
     pub fn init(allocator: *const std.mem.Allocator, connection: xev.TCP) !*Zeon {
         var zeon = try allocator.create(Zeon);
@@ -31,6 +32,8 @@ const Zeon = struct {
         zeon.completion = undefined;
         zeon.frame = undefined;
         zeon.buffer = try allocator.alloc(u8, 0);
+        zeon.transfered = 0;
+        zeon.authentificated = false;
         return zeon;
     }
 
@@ -98,6 +101,12 @@ pub fn main() !void {
     try loop.run(.until_done);
 }
 
+pub fn sha256(pass: []const u8, out: *[32]u8) void {
+    var hash = std.crypto.hash.sha2.Sha256.init(.{});
+    hash.update(pass);
+    hash.final(out[0..32]);
+}
+
 fn on_connect(allocator: ?*std.mem.Allocator, l: *xev.Loop, _: *xev.Completion, connection: xev.TCP, res: xev.TCP.ConnectError!void) xev.CallbackAction {
     _ = res catch {
         return .disarm;
@@ -121,8 +130,68 @@ fn get_info(self: ?*Zeon, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.R
     self.?.frame.from_buffer();
     switch (self.?.frame.status) {
         .Ok => {
-            std.debug.print("Got ok!\n", .{});
-            self.?.deinit();
+            if (!self.?.authentificated) {
+                return auth(self, l);
+            }
+        },
+        else => {
+            @panic("Not implemented");
+        },
+    }
+    _ = c;
+    return .disarm;
+}
+
+fn auth(self: ?*Zeon, loop: *xev.Loop) xev.CallbackAction {
+    std.debug.print("Enter username: ", .{});
+
+    var username = getin(self.?.allocator.*) catch {
+        self.?.deinit();
+        return .disarm;
+    };
+
+    std.debug.print("Enter password: ", .{});
+    var pass = getin(self.?.allocator.*) catch {
+        self.?.deinit();
+        return .disarm;
+    };
+
+    var hash: [32]u8 = undefined;
+    sha256(pass, &hash);
+    var buffer: [1015]u8 = undefined;
+    var printed = std.fmt.bufPrint(&buffer, "{s} {s}", .{username, hash}) catch {
+        self.?.allocator.free(username);
+        self.?.allocator.free(pass);
+        self.?.deinit();
+        return .disarm;
+    };
+    self.?.allocator.free(username);
+    self.?.allocator.free(pass);
+
+    var fram: frame.ZeonFrame = undefined;
+    fram.status = .Auth;
+    fram.to_buffer(printed.len);
+    fram.write_buffer(buffer[0..1015]);
+
+    self.?.frame = fram;
+    self.?.db.write(loop, &self.?.completion, .{ .slice = &self.?.frame.fixed_buffer }, Zeon, self, &auth_write);
+    return .disarm;
+}
+
+fn auth_res(self: ?*Zeon, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
+    var bytes_read = r catch {
+        self.?.deinit();
+        return .disarm;
+    };
+    _ = bytes_read;
+
+    self.?.frame.from_buffer();
+    switch (self.?.frame.status) {
+        .Ok => {
+            self.?.authentificated = true;
+        },
+        .Error => {
+            @panic("Buffer reading needs to be implemented");
         },
         else => {
             @panic("Not implemented");
@@ -131,4 +200,14 @@ fn get_info(self: ?*Zeon, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.R
     _ = c;
     _ = l;
     return .disarm;
-}    
+}
+
+pub fn auth_write(self: ?*Zeon,  l: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, res: xev.TCP.WriteError!usize) xev.CallbackAction {
+    _ = res catch {
+        self.?.deinit();
+        return .disarm;
+    };
+
+    self.?.db.read(l, &self.?.completion, .{ .slice = &self.?.frame.fixed_buffer }, Zeon, self, &auth_res);
+    return .disarm;
+}

@@ -1,8 +1,8 @@
 const xev = @import("xev");
 const types = @import("../types.zig");
 const std = @import("std");
-const collection = @import("../collection.zig");
 const parser = @import("../zql/parser.zig");
+const db = @import("../db.zig");
 const utils = @import("../utils.zig");
 const ctx = @import("../zql/ctx.zig");
 const client = @import("client.zig");
@@ -42,7 +42,15 @@ pub fn get_frame(self: ?*client.Client, l: *xev.Loop, c: *xev.Completion, _: xev
     switch (self.?.frame.status) {
         .Ok => {},
         .Auth => {
-            @panic("Soon enough");
+            var buff = self.?.frame.read_buffer();
+            var index = utils.indexof(buff, ' ');
+            var username = buff[0..index];
+            index += 1;
+            var password = buff[index..index + 32];
+            if (self.?.server.db.?.accs.login(username, password)) {
+                std.debug.print("Client {s} logged in!\n", .{username});
+            }
+            self.?.deinit(self.?.server.allocator.?.*);
         },
         else => {
             @panic("implementing");
@@ -60,7 +68,7 @@ pub const Server = struct {
     completion: xev.Completion,
     port: u16,
     allocator: ?*const std.mem.Allocator,
-    db: ?*collection.Collection,
+    db: ?*db.DB,
 
     pub fn init(port: u16) !Server {
         var address = try std.net.Address.parseIp4("127.0.0.1", port);
@@ -76,12 +84,12 @@ pub const Server = struct {
         };
     }
 
-    pub fn run(self: *@This(), db: *collection.Collection, allocator: *const std.mem.Allocator) !void {
+    pub fn run(self: *@This(), database: *db.DB, allocator: *const std.mem.Allocator) !void {
         try self.socket.bind(self.address);
         try self.socket.listen(1);
 
         self.allocator = allocator;
-        self.db = db;
+        self.db = database;
 
         self.socket.accept(&self.loop, &self.completion, @This(), self, &on_accept);
 

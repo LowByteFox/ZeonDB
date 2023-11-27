@@ -35,6 +35,10 @@ pub const ZeonFrame = struct {
     pub fn write_buffer(self: *@This(), buffer: *[1015]u8) void {
         @memcpy(self.fixed_buffer[9..], buffer);
     }
+
+    pub fn read_buffer(self: *@This()) []u8 {
+        return self.fixed_buffer[9..self.target_length.? + 9];
+    }
 };
 
 pub const ZeonFrameStatus = enum(u8) {

@@ -47,6 +47,6 @@ pub const DB = struct {
     }
 
     pub fn run(self: *DB, allocator: std.mem.Allocator) !void {
-        try self.net.run(&self.db, &allocator);
+        try self.net.run(self, &allocator);
     }
 };

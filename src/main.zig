@@ -8,7 +8,7 @@ pub fn main() !void {
     defer std.debug.assert(gpa.deinit() == .ok);
 
     var db = try database.DB.init(allocator);
-    defer db.deinit();
+    defer db.deinit(allocator);
 
     try db.run(allocator);
 }

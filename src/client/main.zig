@@ -1,5 +1,6 @@
 const std = @import("std");
 const xev = @import("xev");
+const frame = @import("frame.zig");
 
 pub fn copy_over(buff: []u8, start: usize, str: []const u8) void {
     for (0..str.len) |i| {
@@ -15,14 +16,28 @@ pub fn strdup(buff: []const u8, allocator: std.mem.Allocator) ![]u8 {
 
 var last_in: []u8 = undefined;
 
-const Data = struct {
+const Zeon = struct {
     allocator: *const std.mem.Allocator,
-    tmpbuff: [1024]u8,
-    buffer: ?[]u8,
-    connection: xev.TCP,
-    read: xev.Completion,
-    written: usize,
-    status: i8,
+    frame: frame.ZeonFrame,
+    buffer: []u8,
+    db: xev.TCP,
+    completion: xev.Completion,
+    transfered: u64,
+
+    pub fn init(allocator: *const std.mem.Allocator, connection: xev.TCP) !*Zeon {
+        var zeon = try allocator.create(Zeon);
+        zeon.allocator = allocator;
+        zeon.db = connection;
+        zeon.completion = undefined;
+        zeon.frame = undefined;
+        zeon.buffer = try allocator.alloc(u8, 0);
+        return zeon;
+    }
+
+    pub fn deinit(self: *Zeon) void {
+        self.allocator.free(self.buffer);
+        self.allocator.destroy(self);
+    }
 };
 
 fn getcol(begin: usize, str: []const u8) i32 {
@@ -83,124 +98,37 @@ pub fn main() !void {
     try loop.run(.until_done);
 }
 
-fn on_connect(allocator: ?*std.mem.Allocator, l: *xev.Loop, c: *xev.Completion, server: xev.TCP, r: xev.TCP.ConnectError!void) xev.CallbackAction {
-    _ = r catch unreachable;
-    var data = allocator.?.create(Data) catch unreachable;
-    data.allocator = allocator.?;
-    data.tmpbuff = undefined;
-    data.buffer = null;
-    data.connection = server;
-    data.written = 0;
-    data.status = -1;
-
-    std.debug.print("> ", .{});
-
-    var in = getin(data.allocator.*) catch unreachable;
-    data.buffer = std.fmt.allocPrint(data.allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-    last_in = in;
-
-    data.connection.write(l, c, .{ .slice = data.buffer.? }, Data, data, &on_write);
-
-    return .disarm;
-}
-
-pub fn on_read(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
-    var bytes_read = r catch unreachable;
-
-    const allocator = ud.?.allocator;
-
-    if (ud.?.buffer == null) {
-        var status = std.fmt.parseInt(i8, ud.?.tmpbuff[0..1], 10) catch {
-            return .disarm;
-        };
-
-        ud.?.status = status;
-
-        if (status == 0) {
-            std.debug.print("> ", .{});
-
-            var in = getin(allocator.*) catch unreachable;
-            ud.?.buffer = std.fmt.allocPrint(allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-            allocator.free(last_in);
-            last_in = in;
-            ud.?.tmpbuff = undefined;
-            ud.?.written = 0;
-
-            ud.?.connection.write(l, c, .{ .slice = ud.?.buffer.? }, Data, ud.?, &on_write);
-            return .disarm;
-        }
-
-        var i: usize = 2;
-        for (i..bytes_read) |index| {
-            if (!std.ascii.isDigit(ud.?.tmpbuff[index])) {
-                break;
-            }
-            i += 1;
-        }
-        
-        var len = std.fmt.parseInt(usize, ud.?.tmpbuff[2..i], 10) catch {
-            return .disarm;
-        };
-        i += 1; // space
-
-        ud.?.buffer = allocator.allocSentinel(u8, len, 0) catch {
-            return .disarm;
-        };
-
-        @memset(ud.?.buffer.?, 0);
-        @memcpy(ud.?.buffer.?[0..(bytes_read - i)], ud.?.tmpbuff[i..bytes_read]);
-
-        ud.?.written = bytes_read - i;
-    } else {
-        if (bytes_read > ud.?.buffer.?.len - ud.?.written) {
-            bytes_read = ud.?.buffer.?.len - ud.?.written;
-        }
-        @memcpy(ud.?.buffer.?[ud.?.written..(ud.?.written + bytes_read)], ud.?.tmpbuff[0..bytes_read]);
-        ud.?.written += bytes_read;
-    }
-
-    if (ud.?.written >= ud.?.buffer.?.len) {
-        if (ud.?.status == 1) {
-            var col = getcol(0, ud.?.buffer.?);
-            std.debug.print("{s}\n", .{ud.?.buffer.?});
-            if (col > 0) {
-                col -= 1;
-                std.debug.print("{s}\n", .{last_in});
-                for (0..@intCast(col)) |_| {
-                    std.debug.print(" ", .{});
-                }
-                if (@as(i32, @intCast(last_in.len)) > col) {
-                    for (0..@intCast((@as(i32, @intCast(last_in.len)) - col))) |_| {
-                        std.debug.print("^", .{});
-                    }
-                } else {
-                    std.debug.print("^", .{});
-                }
-                std.debug.print("\n", .{});
-            }
-        } else {
-            std.debug.print("{s}\n", .{ud.?.buffer.?});
-        }
-        std.debug.print("> ", .{});
-
-        var in = getin(allocator.*) catch unreachable;
-        ud.?.buffer = std.fmt.allocPrint(allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-        allocator.free(last_in);
-        last_in = in;
-        ud.?.tmpbuff = undefined;
-        ud.?.written = 0;
-
-        ud.?.connection.write(l, c, .{ .slice = ud.?.buffer.? }, Data, ud.?, &on_write);
+fn on_connect(allocator: ?*std.mem.Allocator, l: *xev.Loop, _: *xev.Completion, connection: xev.TCP, res: xev.TCP.ConnectError!void) xev.CallbackAction {
+    _ = res catch {
         return .disarm;
-    }
-    return .rearm;
-}
+    };
 
-pub fn on_write(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, r: xev.TCP.WriteError!usize) xev.CallbackAction {
-    _ = r catch unreachable;
-    ud.?.allocator.free(ud.?.buffer.?);
-    ud.?.buffer = null;
-    @memset(ud.?.tmpbuff[0..1024], 0);
-    ud.?.connection.read(l, c, .{ .slice = &ud.?.tmpbuff }, Data, ud.?, &on_read);
+    var zeon = Zeon.init(allocator.?, connection) catch {
+        return .disarm;
+    };
+
+    zeon.db.read(l, &zeon.completion, .{ .slice = &zeon.frame.fixed_buffer }, Zeon, zeon, &get_info);
     return .disarm;
 }
+
+fn get_info(self: ?*Zeon, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
+    var bytes_read = r catch {
+        self.?.deinit();
+        return .disarm;
+    };
+    _ = bytes_read;
+
+    self.?.frame.from_buffer();
+    switch (self.?.frame.status) {
+        .Ok => {
+            std.debug.print("Got ok!\n", .{});
+            self.?.deinit();
+        },
+        else => {
+            @panic("Not implemented");
+        },
+    }
+    _ = c;
+    _ = l;
+    return .disarm;
+}    

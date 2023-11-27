@@ -5,174 +5,43 @@ const collection = @import("../collection.zig");
 const parser = @import("../zql/parser.zig");
 const utils = @import("../utils.zig");
 const ctx = @import("../zql/ctx.zig");
-
-pub const Client = struct {
-    server: *Server,
-    tmpbuff: [1024]u8,
-    buffer: ?[:0]u8,
-    outbuff: ?[]u8,
-    written: usize,
-    client: xev.TCP,
-    completion: xev.Completion,
-};
+const client = @import("client.zig");
 
 pub fn on_accept(self: ?*Server, l: *xev.Loop, _: *xev.Completion, connection: xev.TCP.AcceptError!xev.TCP) xev.CallbackAction {
-    var client = self.?.allocator.?.create(Client) catch {
-        return .disarm;
-    };
-    client.server = self.?;
-    client.client = connection catch {
-        return .disarm;
-    };
-    client.completion = undefined;
-    client.tmpbuff = undefined;
-    client.buffer = null;
-    client.outbuff = null;
-    client.written = 0;
-
-    client.client.read(l, &client.completion, .{ .slice = &client.tmpbuff }, Client, client, &on_read);
-
-    return .rearm;
-}
-
-pub fn on_read(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
-    var bytes_read = r catch {
-        bozo_left(self.?);
+    var conn = connection catch {
         return .disarm;
     };
 
-    const allocator = self.?.server.allocator.?;
+    var cl = client.Client.init(self.?.allocator.?.*, self.?, conn) catch {
+        return .disarm;
+    };
 
-    if (self.?.buffer == null) {
-        var i: usize = 0;
-        for (self.?.tmpbuff) |ch| {
-            if (!std.ascii.isDigit(ch)) {
-                break;
-            }
-            i += 1;
-        }
-
-        if (i == 0) {
-            return .rearm;
-        }
-
-        var len = std.fmt.parseInt(usize, self.?.tmpbuff[0..i], 10) catch {
-            bozo_left(self.?);
-            return .disarm;
-        };
-
-        self.?.buffer = allocator.allocSentinel(u8, len, 0) catch {
-            bozo_left(self.?);
-            return .disarm;
-        };
-
-        @memset(self.?.buffer.?, 0);
-        @memcpy(self.?.buffer.?[0..(bytes_read - i)], self.?.tmpbuff[i..bytes_read]);
-
-        self.?.written = bytes_read - i;
-    } else {
-        if (bytes_read > self.?.buffer.?.len - self.?.written) {
-            bytes_read = self.?.buffer.?.len - self.?.written;
-        }
-        @memcpy(self.?.buffer.?[self.?.written..(self.?.written + bytes_read)], self.?.tmpbuff[0..bytes_read]);
-        self.?.written += bytes_read;
-    }
-
-    if (self.?.written >= self.?.buffer.?.len) {
-        var out = execute(self.?) catch |e| {
-            var string_ver = std.fmt.allocPrint(allocator.*, "{}", .{e}) catch {
-                bozo_left(self.?);
-                return .disarm;
-            };
-            self.?.outbuff = std.fmt.allocPrint(allocator.*, "1 {d} {s}", .{string_ver.len, string_ver}) catch {
-                bozo_left(self.?);
-                return .disarm;
-            };
-            allocator.free(string_ver);
-            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write); 
-            return .disarm;
-        };
-        if (out.err) |e| {
-            allocator.free(self.?.buffer.?);
-            self.?.outbuff = std.fmt.allocPrint(allocator.*, "1 {d} {s}", .{e.len, e}) catch {
-                bozo_left(self.?);
-                return .disarm;
-            };
-            allocator.free(e);
-            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write); 
-            return .disarm;
-        }
-        if (out.value) |v| {
-            var str = types.stringify(v, types.FormatType.JSON, allocator.*) catch unreachable;
-            allocator.free(self.?.buffer.?);
-            self.?.outbuff = std.fmt.allocPrint(allocator.*, "2 {} {s}", .{str.len, str}) catch {
-                bozo_left(self.?);
-                return .disarm;
-            };
-            allocator.free(str);
-            self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
-            return .disarm;
-        }
-
-        allocator.free(self.?.buffer.?);
-        self.?.buffer = null;
-        self.?.written = 0;
-        self.?.outbuff = utils.strdup("0", allocator.*) catch {
-            bozo_left(self.?);
-            return .disarm;
-        };
-        self.?.client.write(l, c, .{ .slice = self.?.outbuff.? }, Client, self.?, &on_write);
-    }
+    cl.frame.status = @enumFromInt(0);
+    cl.frame.target_length = 0;
+    cl.frame.to_buffer(null);
+    cl.client.write(l, &cl.completion, .{ .slice = &cl.frame.fixed_buffer }, client.Client, cl, &inform_client);
+    cl.client.read(l, &cl.completion, .{ .slice = &cl.frame.fixed_buffer }, client.Client, cl, &get_frame);
     return .disarm;
 }
 
-pub fn on_write(self: ?*Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, r: xev.TCP.WriteError!usize) xev.CallbackAction {
+pub fn inform_client(self: ?*client.Client, _: *xev.Loop, _: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, r: xev.TCP.WriteError!usize) xev.CallbackAction {
     _ = r catch {
-        bozo_left(self.?);
-        return .disarm;
+        self.?.deinit(self.?.server.allocator.?.*);
     };
-
-    const allocator = self.?.server.allocator.?;
-    allocator.free(self.?.outbuff.?);
-    self.?.buffer = null;
-    self.?.written = 0;
-    @memset(self.?.tmpbuff[0..1024], 0);
-    self.?.client.read(l, c, .{ .slice = &self.?.tmpbuff }, Client, self.?, &on_read);
     return .disarm;
 }
 
-pub fn execute(client: *Client) !ctx.ZqlTrace {
-    const allocator = client.server.allocator.?;
-    var parse = parser.Parser.init(client.server.db.?, client.buffer.?);
-    var args = try parse.parse(allocator.*);
-    defer args.deinit();
-    var shared_buffer: ?*types.Value = null;
+pub fn get_frame(self: ?*client.Client, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
+    var bytes_read = r catch {
+        self.?.deinit(self.?.server.allocator.?.*);
+        return .disarm;
+    };
+    _ = bytes_read;
 
-    for (args.items) |*context| {
-        defer context.deinit(allocator.*);
-        var err = context.execute(shared_buffer, allocator.*) catch |e| {
-            if (shared_buffer) |shared| {
-                types.dispose(shared, allocator.*);
-            }
-            return e;
-        };
-        if (err) |e| {
-            return .{ .value = null, .err = e };
-        }
-        if (context.err) |e| {
-            return .{ .value = null, .err = e };
-        }
-        shared_buffer = context.buffer;
-    }
-
-    return .{ .value = shared_buffer, .err = null };
-}
-
-pub fn bozo_left(bozo: *Client) void {
-    if (bozo.buffer != null) {
-        bozo.server.allocator.?.free(bozo.buffer.?);
-    }
-    bozo.server.allocator.?.destroy(bozo);
+    self.?.frame.from_buffer();
+    _ = c;
+    _ = l;
+    return .disarm;
 }
 
 pub const Server = struct {

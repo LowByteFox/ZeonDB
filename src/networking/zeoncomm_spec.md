@@ -5,11 +5,11 @@ Is a communication protocol used by ZeonDB for effective data travel between Zeo
 ZeonFrame size is 1024 bytes for each chunk sent<br>
 ZeonFrame consists of 
 
-* 2 byte integer declaring status code
+* 1 byte integer declaring status code
 * 8 byte integer specifying length of entire buffer sent from client
 * XXX bytes of data
 
-If XXX bytes at start is larger than `1024 - 10` then next `ZeonFrame`<br>
+If XXX bytes at start is larger than `1024 - 8` then next `ZeonFrame`<br>
 is going to contain only buffer data till buffer len matches
 
 > Both `status` and `length` use `little endian`

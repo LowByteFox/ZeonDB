@@ -39,9 +39,10 @@ pub const DB = struct {
         };
     }
 
-    pub fn deinit(self: *DB) void {
+    pub fn deinit(self: *DB, allocator: std.mem.Allocator) void {
         self.accs.deinit();
         self.net.deinit();
+        self.db.deinit(allocator);
         self.conf.deinit();
     }
 

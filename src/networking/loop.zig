@@ -48,17 +48,33 @@ pub fn get_frame(self: ?*client.Client, l: *xev.Loop, c: *xev.Completion, _: xev
             index += 1;
             var password = buff[index..index + 32];
             if (self.?.server.db.?.accs.login(username, password)) {
-                std.debug.print("Client {s} logged in!\n", .{username});
+                self.?.login(username) catch {
+                    self.?.frame.status = @enumFromInt(3);
+                    var msg: [1015]u8 = undefined;
+                    utils.copy_over(&msg, 0, "XX Memory error");
+                    self.?.frame.write_buffer(&msg);
+                    self.?.frame.to_buffer(msg.len);
+                    self.?.send_message(l);
+                };
+                self.?.frame.status = @enumFromInt(1);
+                self.?.frame.target_length = 0;
+                self.?.frame.to_buffer(null);
+                self.?.send_message(l);
+            } else {
+                self.?.frame.status = @enumFromInt(3);
+                var msg: [1015]u8 = undefined;
+                utils.copy_over(&msg, 0, "ER Bad username or password");
+                self.?.frame.write_buffer(&msg);
+                self.?.frame.to_buffer(msg.len);
+                self.?.send_message(l);
             }
-            self.?.deinit(self.?.server.allocator.?.*);
         },
         else => {
             @panic("implementing");
         },
     }
     _ = c;
-    _ = l;
-    return .disarm;
+    return .rearm;
 }
 
 pub const Server = struct {

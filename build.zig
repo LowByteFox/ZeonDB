@@ -13,38 +13,34 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const client = b.addExecutable(.{
-        .name = "zeonctl",
-        .root_source_file = .{ .path = "src/client/main.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
+    //const client = b.addExecutable(.{
+    //    .name = "zeonctl",
+    //    .root_source_file = .{ .path = "src/client/main.zig" },
+    //    .target = target,
+    //    .optimize = optimize,
+    //});
 
     const toml = b.dependency("zigtoml", .{ .target = target, .optimize = optimize });
     exe.addModule("ztoml", toml.module("zig-toml"));
 
-    const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
-    exe.addModule("xev", xev.module("xev"));
-    client.addModule("xev", xev.module("xev"));
-
-    b.installArtifact(client);
+    // b.installArtifact(client);
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
-    const run_client = b.addRunArtifact(client);
+    // const run_client = b.addRunArtifact(client);
 
     run_cmd.step.dependOn(b.getInstallStep());
-    run_client.step.dependOn(b.getInstallStep());
+    // run_client.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
         run_cmd.addArgs(args);
-        run_client.addArgs(args);
+        // run_client.addArgs(args);
     }
 
     const run_step = b.step("server", "Start the DB");
-    const run_client_step = b.step("client", "Run the client");
+    // const run_client_step = b.step("client", "Run the client");
 
-    run_client_step.dependOn(&run_client.step);
+    // run_client_step.dependOn(&run_client.step);
     run_step.dependOn(&run_cmd.step);
 
     const unit_tests = b.addTest(.{

@@ -2,6 +2,13 @@ const std = @import("std");
 const network = @import("networking");
 const api = @import("api.zig");
 
+pub fn indexof(buff: []const u8, char: u8) isize {
+    for (buff,0..) |c, i| {
+        if (c == char) return i;
+    }
+    return -1;
+}
+
 pub fn copy_over(buff: []u8, start: usize, str: []const u8) void {
     for (0..str.len) |i| {
         buff[i + start] = str[i];

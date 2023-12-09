@@ -1,6 +1,7 @@
 const std = @import("std");
 const networking = @import("networking");
 const uv = networking.uv;
+const cbuffer = @import("cbuffer.zig");
 
 extern "c" fn memcpy(*anyopaque, *anyopaque, usize) callconv(.C) ?*anyopaque;
 
@@ -9,8 +10,8 @@ pub const ZeonConnection = extern struct {
     tcp: uv.uv_tcp_t,
     conn: uv.uv_connect_t,
     addr: std.os.sockaddr.in,
-    inbuff: [*c]u8,
-    read: usize,
+    frame_buffer: cbuffer.CBuffer,
+    transfer_buffer: cbuffer.CBuffer,
     authenticated: bool,
     frame: networking.frame.ZeonFrame,
 };
@@ -39,18 +40,16 @@ fn alloc_buff(handle: [*c]uv.uv_handle_t, suggest: usize, buf: [*c]uv.uv_buf_t) 
     var data = networking.loop.extract_data(ZeonConnection, @ptrCast(handle));
     var zigbuf: *uv.uv_buf_t = @ptrCast(buf);
 
-    if (data.read == 0) {
-        data.inbuff = @ptrCast(std.c.malloc(1024));
-    }
+    data.frame_buffer.create(1024);
 
-    if (data.read > 0) {
-        zigbuf.len = 1024 - data.read;
-        zigbuf.base = data.inbuff + data.read;
+    if (data.frame_buffer.size > 0) {
+        zigbuf.len = 1024 - data.frame_buffer.size;
+        zigbuf.base = data.frame_buffer.buffer + data.frame_buffer.size;
         return;
     }
 
     zigbuf.len = 1024;
-    zigbuf.base = data.inbuff;
+    zigbuf.base = data.frame_buffer.buffer;
 }
 
 fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
@@ -61,15 +60,14 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
     }
 
     if (nread > 0) {
-        data.read += @intCast(nread);
+        data.frame_buffer.size += @intCast(nread);
 
-        if (data.read == 1024) {
-            defer std.c.free(data.inbuff);
-            defer data.inbuff = null;
-            defer data.read = 0;
+        if (data.frame_buffer.size == 1024) {
+            defer data.frame_buffer.deinit();
 
-            @memcpy(&data.frame.fixed_buffer, data.inbuff[0..1024]);
+            data.frame_buffer.copy_onto(&data.frame.fixed_buffer);
             data.frame.from_buffer();
+
             switch (data.frame.status) {
                 .Ok => {
                     _ = uv.uv_read_stop(stream);
@@ -100,8 +98,9 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
                 }
             }
         }
-    } else if (nread == 0) {
     } else {
+        std.debug.print("{s}\n", .{uv.uv_strerror(@intCast(nread))});
+        std.os.exit(1);
     }
 }
 
@@ -114,13 +113,16 @@ pub fn zeon_connection_init(ip: []const u8, port: u16) ?*ZeonConnection {
             zeon_connection_deinit(ptr);
             return null;
         };
+
         ptr.addr = addr.in.sa;
         ptr.tcp = undefined;
         ptr.conn = undefined;
         ptr.frame = undefined;
-        ptr.inbuff = null;
-        ptr.read = 0;
         ptr.authenticated = false;
+
+        ptr.frame_buffer = cbuffer.CBuffer.init();
+        ptr.transfer_buffer = cbuffer.CBuffer.init();
+
         _ = uv.uv_tcp_init(ptr.loop, @ptrCast(&ptr.tcp));
         _ = uv.uv_tcp_connect(@ptrCast(&ptr.conn), @ptrCast(&ptr.tcp), @ptrCast(&ptr.addr), &on_connect);
 

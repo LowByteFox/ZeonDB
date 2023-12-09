@@ -248,7 +248,7 @@ pub const Lexer = struct {
             else => {}
         }
 
-        if (std.ascii.isAlphabetic(tok) or tok == '_') {
+        if (std.ascii.isAlphabetic(tok) or tok == '_' or tok == '$') {
             try self.step_back(1);
             return try self.tokenize_identifier();
         } else if (std.ascii.isDigit(tok)) {

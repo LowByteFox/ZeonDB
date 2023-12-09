@@ -83,6 +83,12 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
                         data.authenticated = true;
                     }
                 },
+                .Error => {
+                    var buff = data.frame.read_buffer();
+                    _ = uv.uv_read_stop(stream);
+                    _ = uv.uv_stop(data.loop);
+                    std.debug.print("{s}\n", .{buff});
+                },
                 .Command => {
                     var buff = data.frame.read_buffer();
                     _ = uv.uv_read_stop(stream);
@@ -91,10 +97,7 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
                 },
                 .KeyExchange => {
                     @panic("KeyExchange not implemented");
-                },
-                else => {
-                    @panic("This was not expected?");
-                },
+                }
             }
         }
     } else if (nread == 0) {

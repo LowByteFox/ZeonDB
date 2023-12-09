@@ -40,12 +40,13 @@ pub fn main() !void {
 
     if (api.zeon_connection_auth(zeon, "theo", "paris")) {
         var end = false;
-        while (!end) {
+        while (true) {
             std.debug.print("({s}@{s})> ", .{"theo", "127.0.0.1"});
             var command = try getline(allocator);
             defer allocator.free(command);
 
             end = std.mem.eql(u8, command[0..4], "quit");
+            if (end) break;
 
             if (command.len > 1015) {
                 const leftover = (command.len - 1015) % 1024;

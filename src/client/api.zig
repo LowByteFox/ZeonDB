@@ -22,7 +22,7 @@ fn on_connect(req: [*c]uv.uv_connect_t, status: i32) callconv(.C) void {
     _ = req;
 }
 
-fn auth_write(req: [*c]uv.uv_write_t, status: i32) callconv(.C) void {
+fn on_write(req: [*c]uv.uv_write_t, status: i32) callconv(.C) void {
     var data = networking.loop.extract_data(ZeonConnection, @ptrCast(req));
 
     if (status < 0) {
@@ -82,6 +82,12 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
                     if (std.mem.eql(u8, buff[0..2], "OK")) {
                         data.authenticated = true;
                     }
+                },
+                .Command => {
+                    var buff = data.frame.read_buffer();
+                    _ = uv.uv_read_stop(stream);
+                    _ = uv.uv_stop(data.loop);
+                    std.debug.print("{s}\n", .{buff});
                 },
                 .KeyExchange => {
                     @panic("KeyExchange not implemented");
@@ -143,7 +149,7 @@ pub fn zeon_connection_auth(conn: *ZeonConnection, username: []const u8, passwor
     var req: [*c]uv.uv_write_t = @ptrCast(@alignCast(std.c.malloc(@sizeOf(uv.uv_write_t)).?)); // TODO: secure
     uv.uv_handle_set_data(@ptrCast(req), @ptrCast(conn));
     var buf = uv.uv_buf_init(@ptrCast(&conn.frame.fixed_buffer), 1024);
-    _ = uv.uv_write(@ptrCast(req), @ptrCast(&conn.tcp), @ptrCast(&buf), 1, &auth_write);
+    _ = uv.uv_write(@ptrCast(req), @ptrCast(&conn.tcp), @ptrCast(&buf), 1, &on_write);
     _ = uv.uv_run(conn.loop, uv.UV_RUN_DEFAULT);
     return conn.authenticated;
 }
@@ -180,7 +186,7 @@ pub fn zeon_connection_execute(conn: *ZeonConnection, script: []const u8) void {
 
     var req: [*c]uv.uv_write_t = @ptrCast(@alignCast(std.c.malloc(@sizeOf(uv.uv_write_t)).?)); // TODO: secure
     uv.uv_handle_set_data(@ptrCast(req), @ptrCast(conn));
-    _ = uv.uv_write(@ptrCast(req), @ptrCast(&conn.tcp), buffers, @intCast(buf_count), &auth_write);
+    _ = uv.uv_write(@ptrCast(req), @ptrCast(&conn.tcp), buffers, @intCast(buf_count), &on_write);
     _ = uv.uv_run(conn.loop, uv.UV_RUN_DEFAULT);
 
     std.c.free(buffers);

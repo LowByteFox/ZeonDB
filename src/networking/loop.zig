@@ -3,6 +3,7 @@ const std = @import("std");
 const db = @import("../db.zig");
 const cl = @import("client.zig");
 const utils = @import("../utils.zig");
+const types = @import("../types.zig");
 
 pub fn extract_data(comptime T: type, uv_data: [*c]uv.uv_handle_type) *T {
     var data = uv.uv_handle_get_data(@ptrCast(@alignCast(uv_data)));
@@ -105,7 +106,54 @@ fn handle_frame(self: *cl.Client) void {
                 }
                 return;
             }
-            @panic("Need to handle execution");
+
+            defer {
+                allocator.free(self.command_buffer.?);
+                self.command_written = 0;
+                self.command_buffer = null;
+            }
+
+            var buffer: [1015]u8 = undefined;
+
+            var result = self.server.db.?.execute(self.command_buffer.?, allocator.*) catch |e| {
+                var printed = std.fmt.bufPrint(&buffer, "{}", .{e}) catch unreachable; 
+                self.frame.status = .Error;
+                self.frame.to_buffer(printed.len);
+                self.frame.write_buffer(buffer[0..1015]);
+                self.send_message() catch unreachable;
+                return;
+            };
+
+            if (result.err) |e| {
+                var printed = std.fmt.bufPrint(&buffer, "{s}", .{e}) catch unreachable; 
+                self.frame.status = .Error;
+                self.frame.to_buffer(printed.len);
+                self.frame.write_buffer(buffer[0..1015]);
+                self.send_message() catch unreachable;
+                return;
+            }
+
+            if (result.value) |v| {
+                var str: []u8 = undefined;
+                if (!std.mem.eql(u8, self.server.db.?.conf.value.format[0..3], "ZQL")) {
+                    str = types.stringify(v, types.FormatType.JSON, allocator.*) catch unreachable;
+                } else {
+                    str = types.stringify(v, types.FormatType.ZQL, allocator.*) catch unreachable;
+                }
+
+                var printed = std.fmt.bufPrint(&buffer, "{s}", .{str}) catch unreachable; 
+                self.frame.status = .Command;
+                self.frame.to_buffer(printed.len);
+                self.frame.write_buffer(buffer[0..1015]);
+                self.send_message() catch unreachable;
+                return;
+            }
+
+            @memcpy(buffer[0..2], "OK");
+            self.frame.status = .Command;
+            self.frame.to_buffer(2);
+            self.frame.write_buffer(buffer[0..1015]);
+            self.send_message() catch unreachable;
         },
         else => {
             @panic("Implementing rest of others");

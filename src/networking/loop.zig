@@ -37,29 +37,28 @@ fn alloc_buff(handle: [*c]uv.uv_handle_t, suggest: usize, buf: [*c]uv.uv_buf_t) 
     _ = suggest;
     var data = extract_data(cl.Client, @ptrCast(handle));
     var zigbuf: *uv.uv_buf_t = @ptrCast(buf);
-    const allocator = data.server.allocator.?;
 
-    if (data.buffer.len == 0) {
-        data.buffer = allocator.realloc(data.buffer, 1024) catch unreachable;
-        var buffer: [*]u8 = @ptrCast(data.buffer);
+    if (data.read == 0) {
+        data.buffer = @ptrCast(std.c.malloc(1024));
+    }
 
-        zigbuf.len = 1024;
-        zigbuf.base = buffer;
+    if (data.read > 0) {
+        zigbuf.len = 1024 - data.read;
+        zigbuf.base = data.buffer + data.read;
         return;
     }
 
-    if (data.buffer.len > 0) {
-        var buffer: [*]u8 = @ptrCast(data.buffer);
-        zigbuf.len = 1024 - data.buffer.len;
-        zigbuf.base = buffer + data.buffer.len;
-        return;
-    }
+    zigbuf.len = 1024;
+    zigbuf.base = data.buffer;
 }
 
 fn handle_frame(self: *cl.Client) void {
+    const allocator = self.server.allocator.?;
+
     switch (self.frame.status) {
         .Ok => {},
         .Auth => {
+            var msg: [1015]u8 = undefined;
             var buff = self.frame.read_buffer();
             var index = utils.indexof(buff, ' ');
             var username = buff[0..index];
@@ -68,7 +67,6 @@ fn handle_frame(self: *cl.Client) void {
             if (self.server.db.?.accs.login(username, password)) {
                 self.login(username) catch {
                     self.frame.status = @enumFromInt(3);
-                    var msg: [1015]u8 = undefined;
                     utils.copy_over(&msg, 0, "XX Memory error");
                     self.frame.write_buffer(&msg);
                     self.frame.to_buffer(msg.len);
@@ -76,15 +74,15 @@ fn handle_frame(self: *cl.Client) void {
                     return;
                 };
                 self.frame.status = @enumFromInt(3);
-                var msg: [1015]u8 = undefined;
                 @memset(&msg, 0);
                 utils.copy_over(&msg, 0, "OK");
                 self.frame.write_buffer(&msg);
                 self.frame.to_buffer(msg.len);
                 self.send_message() catch unreachable;
+                self.user = allocator.realloc(self.user, username.len) catch unreachable;
+                @memcpy(self.user, username);
             } else {
                 self.frame.status = @enumFromInt(3);
-                var msg: [1015]u8 = undefined;
                 @memset(&msg, 0);
                 utils.copy_over(&msg, 0, "ER Bad username or password");
                 self.frame.write_buffer(&msg);
@@ -101,22 +99,27 @@ fn handle_frame(self: *cl.Client) void {
 fn get_frame(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     _ = buf;
     var data = extract_data(cl.Client, @ptrCast(stream));
-    const allocator = data.server.allocator.?;
 
     if (nread == uv.UV_EOF) {
         @panic("TODO: Client died");
     }
 
     if (nread > 0) {
-        if (data.buffer.len == 1024) {
-            defer data.buffer = allocator.realloc(data.buffer, 0) catch unreachable;
+        data.read += @intCast(nread);
 
-            @memcpy(&data.frame.fixed_buffer, data.buffer);
+        if (data.read == 1024) {
+            defer std.c.free(data.buffer);
+            defer data.buffer = null;
+            defer data.read = 0;
+
+            @memcpy(&data.frame.fixed_buffer, data.buffer[0..1024]);
             data.frame.from_buffer();
             handle_frame(data);
         }
     } else if (nread == 0) {
     } else {
+        std.debug.print("{s}\n", .{uv.uv_strerror(@intCast(nread))});
+        _ = uv.uv_stop(data.server.loop);
     }
 }
 

@@ -56,6 +56,9 @@ fn alloc_buff(handle: [*c]uv.uv_handle_t, suggest: usize, buf: [*c]uv.uv_buf_t) 
 fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     _ = buf;
     var data = networking.loop.extract_data(ZeonConnection, @ptrCast(stream));
+    if (nread == uv.UV_EOF) {
+        @panic("TODO: DB DIED");
+    }
 
     if (nread > 0) {
         data.read += @intCast(nread);
@@ -69,10 +72,12 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
             data.frame.from_buffer();
             switch (data.frame.status) {
                 .Ok => {
+                    _ = uv.uv_read_stop(stream);
                     _ = uv.uv_stop(data.loop);
                 },
                 .Auth => {
                     var buff = data.frame.read_buffer();
+                    _ = uv.uv_read_stop(stream);
                     _ = uv.uv_stop(data.loop);
                     if (std.mem.eql(u8, buff[0..2], "OK")) {
                         data.authenticated = true;
@@ -85,14 +90,9 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
                     @panic("This was not expected?");
                 },
             }
-        } else {
-            _ = uv.uv_read_start(@ptrCast(&data.tcp), &alloc_buff, &on_read);
         }
     } else if (nread == 0) {
     } else {
-        if (nread == uv.UV_EOF) {
-            @panic("TODO: DB DIED");
-        }
     }
 }
 

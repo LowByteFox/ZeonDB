@@ -17,9 +17,9 @@ fn send_msg(req: [*c]uv.uv_write_t, status: i32) callconv(.C) void {
 
 pub const Client = struct {
     server: *Server,
-    buffer: []u8,
+    buffer: [*c]u8,
+    read: usize,
     output: []u8,
-    transfered: u64,
     client: [*c]uv.uv_tcp_t,
     frame: comm.ZeonFrame,
     user: []u8,
@@ -29,10 +29,10 @@ pub const Client = struct {
         var client: *Client = try allocator.create(Client);
         client.server = serv;
         client.client = connection;
-        client.buffer = try allocator.alloc(u8, 0);
+        client.buffer = null;
+        client.read = 0;
         client.output = try allocator.alloc(u8, 0);
         client.user = try allocator.alloc(u8, 0);
-        client.transfered = 0;
         client.frame = undefined;
         client.uvbuf = undefined;
 
@@ -45,7 +45,7 @@ pub const Client = struct {
     }
 
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
-        allocator.free(self.buffer);
+        std.c.free(self.buffer);
         allocator.free(self.output);
         allocator.free(self.user);
         allocator.destroy(self);

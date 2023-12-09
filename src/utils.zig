@@ -18,3 +18,10 @@ pub fn includes(buff: []const u8, char: u8) bool {
     }
     return false;
 }
+
+pub fn indexof(buff: []const u8, char: u8) usize {
+    for (buff,0..) |c, i| {
+        if (c == char) return i;
+    }
+    return 0;
+}

@@ -29,13 +29,35 @@ fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 
 fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     ctx.sweep_arg(0);
-    var args1 = ctx.get_arg(0).?.String;
-    _ = args1;
-    var val = ctx.db.get(ctx.get_arg(0).?.String);
-    if (val) |v| {
+    var arg1 = ctx.get_arg(0).?;
+
+    if (std.mem.eql(u8, arg1.String[0..1], "$")) {
+        std.debug.print("ahoj\n", .{});
+        var v = try allocator.create(types.Value);
+        v.* = .{ .Collection = ctx.db.* };
         ctx.buffer = v;
-    } else {
+        return;
+    }
+
+    var split = std.mem.splitScalar(u8, arg1.String, '.');
+    var current = ctx.db;
+
+    while (split.next()) |s| {
+        if (split.peek() == null) {
+            var val = current.get(s);
+            if (val) |v| {
+                ctx.buffer = v;
+            } else {
+                ctx.err = try std.fmt.allocPrint(allocator, "No such key \"{s}\"!", .{ctx.get_arg(0).?.String});
+            }
+            break;
+        }
+        if (current.get(s)) |cur| {
+            current = &cur.Collection;
+            continue;
+        }
         ctx.err = try std.fmt.allocPrint(allocator, "No such key \"{s}\"!", .{ctx.get_arg(0).?.String});
+        break;
     }
 }
 

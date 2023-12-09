@@ -3,10 +3,6 @@
     .version = "0.1.0",
     .paths = .{"libs"},
     .dependencies = .{
-        .libxev = .{
-            .url = "https://github.com/mitchellh/libxev/archive/04f21b9af5c5412bb80f2dd2b670398800f31209.tar.gz",
-            .hash = "122066c6617bd0c106280eaf6bf7a8169c197cec7b97d35c5add1d3439b65984cefa",
-        },
         .zigtoml = .{
             .url = "https://github.com/sam701/zig-toml/archive/6d19db1ba22ef0714d697f487f78f64ec5b1fe2b.tar.gz",
             .hash = "12204a4bda9741739bdf3794b054bc475df4dc11f6a5a48dc30abbf35a0450926b7f"

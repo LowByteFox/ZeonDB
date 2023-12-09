@@ -10,8 +10,7 @@ pub const Permission = struct {
 };
 
 pub const Account = struct {
-    password: [32]u8,
-    
+    password: [32]u8,    
 };
 
 pub const AccountManager = struct {

@@ -1,8 +1,8 @@
 const std = @import("std");
 
-pub const ZeonFrame = struct {
+pub const ZeonFrame = extern struct {
     status: ZeonFrameStatus,
-    target_length: ?u64,
+    target_length: u64,
     fixed_buffer: [1024]u8,
 
     pub fn to_buffer(self: *@This(), length: ?u64) void {
@@ -27,8 +27,7 @@ pub const ZeonFrame = struct {
             .Command, .Error, .Auth, .KeyExchange => {
                 self.target_length = std.mem.readInt(u64, self.fixed_buffer[1..9], std.builtin.Endian.Little);
             },
-            else => {
-            }
+            else => {}
         }
     }
 
@@ -37,7 +36,7 @@ pub const ZeonFrame = struct {
     }
 
     pub fn read_buffer(self: *@This()) []u8 {
-        return self.fixed_buffer[9..self.target_length.? + 9];
+        return self.fixed_buffer[9..self.target_length + 9];
     }
 };
 

@@ -34,16 +34,26 @@ fn on_connect(tcp: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
 }
 
 fn alloc_buff(handle: [*c]uv.uv_handle_t, suggest: usize, buf: [*c]uv.uv_buf_t) callconv(.C) void {
+    _ = suggest;
     var data = extract_data(cl.Client, @ptrCast(handle));
     var zigbuf: *uv.uv_buf_t = @ptrCast(buf);
-    zigbuf.len = suggest;
-
     const allocator = data.server.allocator.?;
-    
-    const old_size = data.buffer.len;
-    data.buffer = allocator.realloc(data.buffer, data.buffer.len + suggest) catch unreachable;
-    var buffer: [*]u8 = @ptrCast(data.buffer);
-    zigbuf.base = buffer + old_size;
+
+    if (data.buffer.len == 0) {
+        data.buffer = allocator.realloc(data.buffer, 1024) catch unreachable;
+        var buffer: [*]u8 = @ptrCast(data.buffer);
+
+        zigbuf.len = 1024;
+        zigbuf.base = buffer;
+        return;
+    }
+
+    if (data.buffer.len > 0) {
+        var buffer: [*]u8 = @ptrCast(data.buffer);
+        zigbuf.len = 1024 - data.buffer.len;
+        zigbuf.base = buffer + data.buffer.len;
+        return;
+    }
 }
 
 fn handle_frame(self: *cl.Client) void {
@@ -89,23 +99,24 @@ fn handle_frame(self: *cl.Client) void {
 }
 
 fn get_frame(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
-    var zigbuf: *const uv.uv_buf_t = @ptrCast(buf);
+    _ = buf;
     var data = extract_data(cl.Client, @ptrCast(stream));
-
     const allocator = data.server.allocator.?;
 
+    if (nread == uv.UV_EOF) {
+        @panic("TODO: Client died");
+    }
+
     if (nread > 0) {
-        data.buffer = allocator.realloc(data.buffer, data.buffer.len - zigbuf.len + @as(usize, @intCast(nread))) catch unreachable;
-        if (data.buffer.len % 1024 == 0) {
+        if (data.buffer.len == 1024) {
+            defer data.buffer = allocator.realloc(data.buffer, 0) catch unreachable;
+
             @memcpy(&data.frame.fixed_buffer, data.buffer);
             data.frame.from_buffer();
             handle_frame(data);
         }
     } else if (nread == 0) {
     } else {
-        if (nread == uv.UV_EOF) {
-            @panic("TODO: Client died");
-        }
     }
 }
 

@@ -90,8 +90,25 @@ fn handle_frame(self: *cl.Client) void {
                 self.send_message() catch unreachable;
             }
         },
+        .Command => {
+            if (self.command_buffer == null) {
+                var buff = self.frame.read_buffer();
+
+                self.command_buffer = allocator.allocSentinel(u8, self.frame.target_length, 0) catch unreachable;
+                if (self.frame.target_length > 1015) {
+                    @memcpy(self.command_buffer.?[0..1015], buff[0..1015]);
+                    self.command_written += 1015;
+                } else {
+                    @memcpy(self.command_buffer.?, buff);
+                    // rehandle the thing
+                    handle_frame(self);
+                }
+                return;
+            }
+            @panic("Need to handle execution");
+        },
         else => {
-            @panic("implementing");
+            @panic("Implementing rest of others");
         },
     }
 }
@@ -112,6 +129,11 @@ fn get_frame(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_
             defer data.buffer = null;
             defer data.read = 0;
 
+            if (data.command_buffer != null) {
+                @memcpy(data.command_buffer.?, data.buffer[0..1024]);
+                data.command_written += 1024;
+                return;
+            }
             @memcpy(&data.frame.fixed_buffer, data.buffer[0..1024]);
             data.frame.from_buffer();
             handle_frame(data);

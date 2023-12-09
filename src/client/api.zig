@@ -148,6 +148,44 @@ pub fn zeon_connection_auth(conn: *ZeonConnection, username: []const u8, passwor
     return conn.authenticated;
 }
 
+pub fn zeon_connection_execute(conn: *ZeonConnection, script: []const u8) void {
+    var buffer: [1015]u8 = undefined;
+
+    var buf_count: usize = 1;
+
+    var buffers: [*c]uv.uv_buf_t = null;
+
+    if (script.len > 1015) {
+        _ = std.fmt.bufPrint(&buffer, "{s}", .{script[0..1015]}) catch unreachable;
+
+        var size = script.len - 1015;
+        var extra_count = size / 1024;
+
+        buf_count += @intCast(extra_count);
+        buffers = @ptrCast(@alignCast(std.c.malloc(@sizeOf(uv.uv_buf_t) * buf_count)));
+
+        for (0..extra_count) |i| {
+            buffers[i + 1] = uv.uv_buf_init(@ptrCast(@constCast(script[1015 + i * 1024..1015 + (i + 1) * 1024])), 1024);
+        }
+    } else {
+        buffers = @ptrCast(@alignCast(std.c.malloc(@sizeOf(uv.uv_buf_t) * buf_count)));
+        _ = std.fmt.bufPrint(&buffer, "{s}", .{script}) catch unreachable;
+    }
+
+    conn.frame.status = .Command;
+    conn.frame.to_buffer(script.len);
+    conn.frame.write_buffer(buffer[0..1015]);
+
+    buffers[0] = uv.uv_buf_init(@ptrCast(&conn.frame.fixed_buffer), 1024);
+
+    var req: [*c]uv.uv_write_t = @ptrCast(@alignCast(std.c.malloc(@sizeOf(uv.uv_write_t)).?)); // TODO: secure
+    uv.uv_handle_set_data(@ptrCast(req), @ptrCast(conn));
+    _ = uv.uv_write(@ptrCast(req), @ptrCast(&conn.tcp), buffers, @intCast(buf_count), &auth_write);
+    _ = uv.uv_run(conn.loop, uv.UV_RUN_DEFAULT);
+
+    std.c.free(buffers);
+}
+
 pub fn zeon_connection_deinit(conn: *ZeonConnection) void {
     std.c.free(conn);
 }

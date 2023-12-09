@@ -24,6 +24,8 @@ pub const Client = struct {
     frame: comm.ZeonFrame,
     user: []u8,
     uvbuf: uv.uv_buf_t,
+    command_buffer: ?[:0]u8,
+    command_written: usize,
 
     pub fn init(allocator: std.mem.Allocator, serv: *Server, connection: [*c]uv.uv_tcp_t) !*Client {
         var client: *Client = try allocator.create(Client);
@@ -33,6 +35,8 @@ pub const Client = struct {
         client.read = 0;
         client.output = try allocator.alloc(u8, 0);
         client.user = try allocator.alloc(u8, 0);
+        client.command_buffer = null;
+        client.command_written = 0;
         client.frame = undefined;
         client.uvbuf = undefined;
 

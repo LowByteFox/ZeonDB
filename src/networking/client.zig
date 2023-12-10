@@ -20,14 +20,14 @@ pub const Client = struct {
     buffer: [*c]u8,
     read: usize,
     output: []u8,
-    client: [*c]uv.uv_tcp_t,
+    client: uv.uv_tcp_t,
     frame: comm.ZeonFrame,
     user: []u8,
     uvbuf: uv.uv_buf_t,
     command_buffer: ?[:0]u8,
     command_written: usize,
 
-    pub fn init(allocator: std.mem.Allocator, serv: *Server, connection: [*c]uv.uv_tcp_t) !*Client {
+    pub fn init(allocator: std.mem.Allocator, serv: *Server, connection: uv.uv_tcp_t) !*Client {
         var client: *Client = try allocator.create(Client);
         client.server = serv;
         client.client = connection;
@@ -61,6 +61,6 @@ pub const Client = struct {
         var req = try allocator.create(uv.uv_write_t);
         uv.uv_handle_set_data(@ptrCast(req), @ptrCast(self));
         self.uvbuf = uv.uv_buf_init(@ptrCast(&self.frame.fixed_buffer), 1024);
-        _ = uv.uv_write(@ptrCast(req), @ptrCast(self.client), @ptrCast(&self.uvbuf), 1, &send_msg);
+        _ = uv.uv_write(@ptrCast(req), @ptrCast(&self.client), @ptrCast(&self.uvbuf), 1, &send_msg);
     }
 };

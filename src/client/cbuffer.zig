@@ -1,6 +1,7 @@
 const std = @import("std");
 
 extern "c" fn memcpy(*anyopaque, *anyopaque, usize) callconv(.C) ?*anyopaque;
+extern "c" fn malloc(size: usize) ?[*]u8;
 
 pub const CBuffer = extern struct {
     buffer: [*c]u8,
@@ -17,7 +18,7 @@ pub const CBuffer = extern struct {
 
     pub fn create(self: *CBuffer, size: usize) void {
         if (self.allocated == 0 and self.buffer == null) {
-            var buffer: ?[*c]u8 = @ptrCast(std.c.malloc(size));
+            var buffer: ?[*c]u8 = malloc(size);
             if (buffer) |buf| {
                 self.buffer = buf;
                 self.size = 0;
@@ -27,11 +28,23 @@ pub const CBuffer = extern struct {
     }
 
     pub fn append(self: *CBuffer, target: *CBuffer) void {
-        const extra_space = -(self.allocated - self.size - target.size);
+        const extra_space = -(@as(isize, @intCast(self.allocated)) - 
+                @as(isize, @intCast(self.size)) -
+                @as(isize, @intCast(target.size)));
         if (extra_space > 0) {
-            self.buffer = @ptrCast(std.c.realloc(self.allocated + extra_space));
+            self.buffer = @ptrCast(std.c.realloc(self.buffer, self.allocated + @as(usize, @intCast(extra_space))));
         }
-        memcpy(self.buffer + self.size, target.buffer, target.size);
+        _ = memcpy(self.buffer + self.size, target.buffer, target.size);
+    }
+
+    pub fn append_slice(self: *CBuffer, target: []u8) void {
+        const extra_space = -(@as(isize, @intCast(self.allocated)) - 
+                @as(isize, @intCast(self.size)) -
+                @as(isize, @intCast(target.len)));
+        if (extra_space > 0) {
+            self.buffer = @ptrCast(std.c.realloc(self.buffer, self.allocated + @as(usize, @intCast(extra_space))));
+        }
+        _ = memcpy(self.buffer + self.size, @ptrCast(target), target.len);
     }
 
     pub fn deinit(self: *CBuffer) void {
@@ -48,11 +61,12 @@ pub const CBuffer = extern struct {
     }
 
     pub fn from_slice(slice: []u8) ?CBuffer {
-        var buffer: ?[*c]u8 = @ptrCast(std.c.malloc(slice.len));
+        var buffer: ?[*]u8 = malloc(slice.len);
         if (buffer) |buf| {
             for (slice, 0..) |char, i| {
-                buffer[i] = char;
+                buf[i] = char;
             }
+            buf[slice.len] = 0;
 
             return .{
                 .buffer = buf,

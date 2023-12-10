@@ -17,6 +17,7 @@ pub const MarkToSweep = struct {
 pub const ZqlTrace = struct {
     value: ?*types.Value,
     err: ?[]u8,
+    free_value: bool,
 };
 
 // ZqlContext is used to hold context data for a function
@@ -26,6 +27,7 @@ pub const ZqlContext = struct {
     args: std.ArrayList(MarkToSweep),
     func: ?ZqlFunc,
     buffer: ?*types.Value,
+    free_buffer: bool,
     err: ?[]u8,
     
     pub fn init(db: *collection.Collection, allocator: std.mem.Allocator) ZqlContext {
@@ -35,13 +37,16 @@ pub const ZqlContext = struct {
             .func = null,
             .buffer = null,
             .err = null,
+            .free_buffer = false,
         };
     }
 
     pub fn deinit(self: *ZqlContext, allocator: std.mem.Allocator) void {
         for (self.args.items) |arg| {
             if (arg.sweep) {
-                types.dispose(arg.ptr.value.?, allocator);
+                if (arg.ptr.value) |v| {
+                    types.dispose(v, allocator);
+                }
             }
             allocator.destroy(arg.ptr);
         }

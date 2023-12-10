@@ -17,20 +17,21 @@ fn on_connect(tcp: [*c]uv.uv_stream_t, status: i32) callconv(.C) void {
         return;
     }
     var server = extract_data(Server, @ptrCast(tcp));
-    var client = server.allocator.?.create(uv.uv_tcp_t) catch unreachable;
-    _ = uv.uv_tcp_init(server.loop, @ptrCast(client));
-
+    var client: uv.uv_tcp_t = undefined;
     var userdata = cl.Client.init(server.allocator.?.*, server, client) catch unreachable;
-    if (uv.uv_accept(tcp, @ptrCast(client)) == 0) {
-        uv.uv_handle_set_data(@ptrCast(client), @ptrCast(userdata));
+    _ = uv.uv_tcp_init(server.loop, @ptrCast(&userdata.client));
+
+    if (uv.uv_accept(tcp, @ptrCast(&userdata.client)) == 0) {
+        uv.uv_handle_set_data(@ptrCast(&userdata.client), @ptrCast(userdata));
         userdata.frame.status = @enumFromInt(0);
         userdata.frame.target_length = 0;
         userdata.frame.to_buffer(null);
         
         userdata.send_message() catch unreachable;
-        _ = uv.uv_read_start(@ptrCast(client), &alloc_buff, &get_frame);
+        _ = uv.uv_read_start(@ptrCast(&userdata.client), &alloc_buff, &get_frame);
     } else {
-        uv.uv_close(@ptrCast(client), null);
+        uv.uv_close(@ptrCast(&userdata.client), null);
+        userdata.deinit(server.allocator.?.*);
     }
 }
 
@@ -125,7 +126,8 @@ fn handle_frame(self: *cl.Client) void {
             };
 
             if (result.err) |e| {
-                var printed = std.fmt.bufPrint(&buffer, "{s}", .{e}) catch unreachable; 
+                var printed = std.fmt.bufPrint(&buffer, "{s}", .{e}) catch unreachable;
+                defer allocator.free(e);
                 self.frame.status = .Error;
                 self.frame.to_buffer(printed.len);
                 self.frame.write_buffer(buffer[0..1015]);
@@ -135,10 +137,16 @@ fn handle_frame(self: *cl.Client) void {
 
             if (result.value) |v| {
                 var str: []u8 = undefined;
+                defer allocator.free(str);
+
                 if (!std.mem.eql(u8, self.server.db.?.conf.value.format[0..3], "ZQL")) {
                     str = types.stringify(v, types.FormatType.JSON, allocator.*) catch unreachable;
                 } else {
                     str = types.stringify(v, types.FormatType.ZQL, allocator.*) catch unreachable;
+                }
+
+                if (result.free_value) {
+                    allocator.destroy(v);
                 }
 
                 var printed = std.fmt.bufPrint(&buffer, "{s}", .{str}) catch unreachable; 
@@ -166,7 +174,9 @@ fn get_frame(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_
     var data = extract_data(cl.Client, @ptrCast(stream));
 
     if (nread == uv.UV_EOF) {
-        @panic("TODO: Client died");
+        _ = uv.uv_read_stop(stream);
+        data.deinit(data.server.allocator.?.*);
+        return;
     }
 
     if (nread > 0) {

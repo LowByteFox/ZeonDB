@@ -59,6 +59,7 @@ pub const DB = struct {
         defer args.deinit();
 
         var shared_buffer: ?*types.Value = null;
+        var free_val: bool = false;
 
         for (args.items) |*context| {
             defer context.deinit(allocator);
@@ -70,16 +71,23 @@ pub const DB = struct {
             };
 
             if (err) |e| {
-                return .{ .value = null, .err = e };
+                for (0..context.get_arg_count()) |i| {
+                    context.sweep_arg(i);
+                }
+                return .{ .value = null, .err = e, .free_value = free_val };
             }
 
             if (context.err) |e| {
-                return .{ .value = null, .err = e };
+                return .{ .value = null, .err = e, .free_value = free_val };
             }
 
+            if (free_val) {
+                allocator.destroy(shared_buffer.?);
+            }
+            free_val = context.free_buffer;
             shared_buffer = context.buffer;
         }
 
-        return .{ .value = shared_buffer, .err = null };
+        return .{ .value = shared_buffer, .err = null, .free_value = free_val };
     }
 };

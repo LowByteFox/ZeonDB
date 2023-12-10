@@ -16,6 +16,7 @@ fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
             try current.add(s, arg2, allocator);
             break;
         }
+
         if (current.get(s)) |cur| {
             current = &cur.Collection;
             continue;
@@ -32,10 +33,10 @@ fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     var arg1 = ctx.get_arg(0).?;
 
     if (std.mem.eql(u8, arg1.String[0..1], "$")) {
-        std.debug.print("ahoj\n", .{});
         var v = try allocator.create(types.Value);
         v.* = .{ .Collection = ctx.db.* };
         ctx.buffer = v;
+        ctx.free_buffer = true;
         return;
     }
 

@@ -3,7 +3,34 @@ const networking = @import("networking");
 const uv = networking.uv;
 const cbuffer = @import("cbuffer.zig");
 
-extern "c" fn memcpy(*anyopaque, *anyopaque, usize) callconv(.C) ?*anyopaque;
+const ZeonResType = enum(c_int) {
+    ZEON_OK,
+    ZEON_ERR,
+    ZEON_DEAD,
+};
+
+pub const ZeonResult = extern struct {
+    type: ZeonResType,
+    data: cbuffer.CBuffer,
+
+    pub fn init(typ: ZeonResType, buff: cbuffer.CBuffer) ZeonResult {
+        return .{
+            .type = typ,
+            .data = buff
+        };
+    }
+
+    pub fn init_slice(typ: ZeonResType, slice: []u8) ZeonResult {
+        return .{
+            .type = typ,
+            .data = cbuffer.CBuffer.from_slice(slice).?
+        };
+    }
+
+    pub fn deinit(self: *ZeonResult) void {
+        self.data.deinit();
+    }
+};
 
 pub const ZeonConnection = extern struct {
     loop: [*c]uv.uv_loop_t,
@@ -14,6 +41,7 @@ pub const ZeonConnection = extern struct {
     transfer_buffer: cbuffer.CBuffer,
     authenticated: bool,
     frame: networking.frame.ZeonFrame,
+    res: ZeonResult
 };
 
 fn on_connect(req: [*c]uv.uv_connect_t, status: i32) callconv(.C) void {
@@ -52,11 +80,44 @@ fn alloc_buff(handle: [*c]uv.uv_handle_t, suggest: usize, buf: [*c]uv.uv_buf_t) 
     zigbuf.base = data.frame_buffer.buffer;
 }
 
-fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
-    _ = buf;
+fn on_transfer(stream: [*c]uv.uv_stream_t, nread: isize, _: [*c]const uv.uv_buf_t) callconv(.C) void {
+    var self = networking.loop.extract_data(ZeonConnection, @ptrCast(stream));
+
+    if (nread == uv.UV_EOF) {
+        self.frame_buffer.deinit();
+        self.transfer_buffer.deinit();
+        _ = uv.uv_stop(self.loop);
+        _ = uv.uv_read_stop(stream);
+        self.res = ZeonResult.init_slice(.ZEON_DEAD, @ptrCast(@constCast("DEAD")));
+        return;
+    }
+    if (nread > 0) {
+        self.frame_buffer.size += @intCast(nread);
+
+        if (self.frame_buffer.size == 1024) {
+            defer self.frame_buffer.deinit();
+
+            self.transfer_buffer.append(&self.frame_buffer);
+
+            if (self.transfer_buffer.size == self.transfer_buffer.allocated) {
+                handle_frame(stream, self);
+            }
+        }
+    } else {
+        std.debug.print("{s}\n", .{uv.uv_strerror(@intCast(nread))});
+        std.os.exit(1);
+    }
+}
+
+fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, _: [*c]const uv.uv_buf_t) callconv(.C) void {
     var data = networking.loop.extract_data(ZeonConnection, @ptrCast(stream));
     if (nread == uv.UV_EOF) {
-        @panic("TODO: DB DIED");
+        data.frame_buffer.deinit();
+        data.transfer_buffer.deinit();
+        _ = uv.uv_stop(data.loop);
+        _ = uv.uv_read_stop(stream);
+        data.res = ZeonResult.init_slice(.ZEON_DEAD, @ptrCast(@constCast("DEAD")));
+        return;
     }
 
     if (nread > 0) {
@@ -68,39 +129,61 @@ fn on_read(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t)
             data.frame_buffer.copy_onto(&data.frame.fixed_buffer);
             data.frame.from_buffer();
 
-            switch (data.frame.status) {
-                .Ok => {
-                    _ = uv.uv_read_stop(stream);
-                    _ = uv.uv_stop(data.loop);
-                },
-                .Auth => {
-                    var buff = data.frame.read_buffer();
-                    _ = uv.uv_read_stop(stream);
-                    _ = uv.uv_stop(data.loop);
-                    if (std.mem.eql(u8, buff[0..2], "OK")) {
-                        data.authenticated = true;
-                    }
-                },
-                .Error => {
-                    var buff = data.frame.read_buffer();
-                    _ = uv.uv_read_stop(stream);
-                    _ = uv.uv_stop(data.loop);
-                    std.debug.print("{s}\n", .{buff});
-                },
-                .Command => {
-                    var buff = data.frame.read_buffer();
-                    _ = uv.uv_read_stop(stream);
-                    _ = uv.uv_stop(data.loop);
-                    std.debug.print("{s}\n", .{buff});
-                },
-                .KeyExchange => {
-                    @panic("KeyExchange not implemented");
-                }
-            }
+            handle_frame(stream, data);
         }
     } else {
         std.debug.print("{s}\n", .{uv.uv_strerror(@intCast(nread))});
         std.os.exit(1);
+    }
+}
+
+fn handle_frame(stream: [*c]uv.uv_stream_t, self: *ZeonConnection) void {
+    switch (self.frame.status) {
+        .Ok => {
+            _ = uv.uv_read_stop(stream);
+            _ = uv.uv_stop(self.loop);
+        },
+        .Auth => {
+            var buff = self.frame.read_buffer();
+            _ = uv.uv_read_stop(stream);
+            _ = uv.uv_stop(self.loop);
+            if (std.mem.eql(u8, buff[0..2], "OK")) {
+                self.authenticated = true;
+            }
+        },
+        .Error => {
+            var buff = self.frame.read_buffer();
+            _ = uv.uv_read_stop(stream);
+            if (self.frame.target_length > 1015 and self.transfer_buffer.size == 0) {
+                self.transfer_buffer.create(self.frame.target_length);
+                self.transfer_buffer.append_slice(buff);
+                _ = uv.uv_read_start(@ptrCast(&self.tcp), &alloc_buff, &on_transfer);
+            } else {
+                if (self.transfer_buffer.size > 0) {
+                    self.res = ZeonResult.init(.ZEON_ERR, self.transfer_buffer);
+                } else {
+                    self.res = ZeonResult.init_slice(.ZEON_ERR, buff);
+                }
+            }
+        },
+        .Command => {
+            var buff = self.frame.read_buffer();
+            _ = uv.uv_read_stop(stream);
+            if (self.frame.target_length > 1015 and self.transfer_buffer.size == 0) {
+                self.transfer_buffer.create(self.frame.target_length);
+                self.transfer_buffer.append_slice(buff);
+                _ = uv.uv_read_start(@ptrCast(&self.tcp), &alloc_buff, &on_transfer);
+            } else {
+                if (self.transfer_buffer.size > 0) {
+                    self.res = ZeonResult.init(.ZEON_OK, self.transfer_buffer);
+                } else {
+                    self.res = ZeonResult.init_slice(.ZEON_OK, buff);
+                }
+            }
+        },
+        .KeyExchange => {
+            @panic("KeyExchange not implemented");
+        }
     }
 }
 
@@ -119,6 +202,7 @@ pub fn zeon_connection_init(ip: []const u8, port: u16) ?*ZeonConnection {
         ptr.conn = undefined;
         ptr.frame = undefined;
         ptr.authenticated = false;
+        ptr.res = ZeonResult.init_slice(.ZEON_OK, @ptrCast(@constCast("OK")));
 
         ptr.frame_buffer = cbuffer.CBuffer.init();
         ptr.transfer_buffer = cbuffer.CBuffer.init();
@@ -159,7 +243,7 @@ pub fn zeon_connection_auth(conn: *ZeonConnection, username: []const u8, passwor
     return conn.authenticated;
 }
 
-pub fn zeon_connection_execute(conn: *ZeonConnection, script: []const u8) void {
+pub fn zeon_connection_execute(conn: *ZeonConnection, script: []const u8) *ZeonResult {
     var buffer: [1015]u8 = undefined;
 
     var buf_count: usize = 1;
@@ -195,8 +279,17 @@ pub fn zeon_connection_execute(conn: *ZeonConnection, script: []const u8) void {
     _ = uv.uv_run(conn.loop, uv.UV_RUN_DEFAULT);
 
     std.c.free(buffers);
+
+    return &conn.res;
 }
 
 pub fn zeon_connection_deinit(conn: *ZeonConnection) void {
+    if (conn.res.data.buffer) |_| {
+        conn.res.deinit();
+    }
     std.c.free(conn);
+}
+
+pub fn zeon_connection_dead(conn: *ZeonConnection) bool {
+    return conn.res.type == .ZEON_DEAD;
 }

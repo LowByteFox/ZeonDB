@@ -45,15 +45,20 @@ pub fn main() !void {
     var zeon = api.zeon_connection_init("127.0.0.1", 6748).?;
     defer api.zeon_connection_deinit(zeon);
 
+    if (api.zeon_connection_dead(zeon)) {
+        std.debug.print("Unable to contact ZeonDB\n", .{});
+        std.os.exit(1);
+    }
+
     if (api.zeon_connection_auth(zeon, "theo", "paris")) {
-        var end = false;
+        if (api.zeon_connection_dead(zeon)) {
+            std.debug.print("Unable to contact ZeonDB\n", .{});
+            std.os.exit(1);
+        }
         while (true) {
             std.debug.print("({s}@{s})> ", .{"theo", "127.0.0.1"});
             var command = try getline(allocator);
             defer allocator.free(command);
-
-            end = std.mem.eql(u8, command[0..4], "quit");
-            if (end) break;
 
             if (command.len > 1015) {
                 const leftover = (command.len - 1015) % 1024;
@@ -61,7 +66,21 @@ pub fn main() !void {
                 command = try allocator.realloc(command, command.len + tofill);
             }
 
-            api.zeon_connection_execute(zeon, command);
+            var res = api.zeon_connection_execute(zeon, command);
+            defer res.deinit();
+
+            if (res.type == .ZEON_ERR) {
+                std.debug.print("{s}\n", .{res.data.buffer});
+            }
+
+            if (res.type == .ZEON_OK) {
+                std.debug.print("{s}\n", .{res.data.buffer});
+            }
+
+            if (res.type == .ZEON_DEAD) {
+                std.debug.print("Unable to contact ZeonDB\n", .{});
+                std.os.exit(1);
+            }
         }
     }
 }

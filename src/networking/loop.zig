@@ -169,13 +169,18 @@ fn handle_frame(self: *cl.Client) void {
     }
 }
 
+fn close_client(handle: [*c]uv.uv_handle_t) callconv(.C) void {
+    var data = extract_data(cl.Client, @ptrCast(handle));
+    data.deinit(data.server.allocator.?.*);
+}
+
 fn get_frame(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_t) callconv(.C) void {
     _ = buf;
     var data = extract_data(cl.Client, @ptrCast(stream));
 
     if (nread == uv.UV_EOF) {
         _ = uv.uv_read_stop(stream);
-        data.deinit(data.server.allocator.?.*);
+        uv.uv_close(@ptrCast(&data.client), &close_client);
         return;
     }
 

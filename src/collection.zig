@@ -26,7 +26,17 @@ pub const Collection = struct {
 
     pub fn add(self: *Collection, key: []const u8, value: *Value, allocator: std.mem.Allocator) !void {
         try self.db.add(key, value, allocator);
-        try self.keys.append(try utils.strdup(key, allocator));
+        var add_key: bool = true;
+
+        for (self.keys.items) |item| {
+            if (item.len == key.len and std.mem.eql(u8, item, key)) {
+                add_key = false;
+                break;
+            }
+        }
+        if (add_key) {
+            try self.keys.append(try utils.strdup(key, allocator));
+        }
     }
 
     pub fn get(self: *const Collection, key: []const u8) ?*types.Value {

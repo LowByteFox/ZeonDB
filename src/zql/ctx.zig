@@ -28,6 +28,7 @@ pub const ZqlContext = struct {
     func: ?ZqlFunc,
     buffer: ?*types.Value,
     free_buffer: bool,
+    user: ?[]u8,
     err: ?[]u8,
     
     pub fn init(db: *collection.Collection, allocator: std.mem.Allocator) ZqlContext {
@@ -38,6 +39,7 @@ pub const ZqlContext = struct {
             .buffer = null,
             .err = null,
             .free_buffer = false,
+            .user = null,
         };
     }
 
@@ -51,6 +53,15 @@ pub const ZqlContext = struct {
             allocator.destroy(arg.ptr);
         }
         self.args.deinit();
+    }
+
+    pub fn set_user(self: *ZqlContext, username: []const u8, allocator: std.mem.Allocator) !void {
+        self.user = try allocator.alloc(u8, username.len);
+        @memcpy(self.user.?, username);
+    }
+
+    pub fn get_user(self: *ZqlContext) []u8 {
+        return self.user.?;
     }
 
     pub fn add_arg(self: *ZqlContext, arg: *ZqlTrace) !void {

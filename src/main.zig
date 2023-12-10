@@ -19,5 +19,10 @@ pub fn main() !void {
         .password = out,
     });
 
+    try db.db.assign_perm("theo", "$", .{
+        .can_write = true,
+        .can_read = true,
+    }, allocator);
+
     try db.run(allocator);
 }

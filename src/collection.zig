@@ -2,16 +2,19 @@ const std = @import("std");
 const trie = @import("./trie.zig");
 const types = @import("./types.zig");
 const utils = @import("./utils.zig");
+const accounts = @import("accounts.zig");
 
 // A Collection is Trie with improved API and data encapsulation
 pub const Collection = struct {
     db: *trie.Trie(*types.Value),
     keys: std.ArrayList([]const u8),
+    perms: std.StringHashMap(accounts.Permission),
 
     pub fn init(allocator: std.mem.Allocator) !Collection {
         return Collection{
             .db = try trie.Trie(*types.Value).init(allocator),
             .keys = std.ArrayList([]const u8).init(allocator),
+            .perms = std.StringHashMap(accounts.Permission).init(allocator)
         };
     }
 
@@ -22,6 +25,23 @@ pub const Collection = struct {
         }
         self.keys.deinit();
         allocator.destroy(self.db);
+        self.perms.deinit();
+    }
+
+    pub fn assign_perm(self: *Collection, username: []const u8, key: []const u8, perm: accounts.Permission, allocator: std.mem.Allocator) !void {
+        var buffer = try std.fmt.allocPrint(allocator, "{s}:{s}", .{username, key});
+        try self.perms.put(buffer, perm);
+    }
+
+    pub fn get_perm(self: *Collection, username: []const u8, key: []const u8, allocator: std.mem.Allocator) !?accounts.Permission {
+        var buffer = try std.fmt.allocPrint(allocator, "{s}:{s}", .{username, key});
+        defer allocator.free(buffer);
+
+        const perm = self.perms.getPtr(buffer);
+        if (perm) |p| {
+            return p.*;
+        }
+        return null;
     }
 
     pub fn add(self: *Collection, key: []const u8, value: *Value, allocator: std.mem.Allocator) !void {

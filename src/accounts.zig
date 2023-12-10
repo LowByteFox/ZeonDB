@@ -1,12 +1,8 @@
 const std = @import("std");
 
-pub const CAN_READ = 1;
-pub const CAN_WRITE = 1 << 1;
-pub const CAN_EXECUTE = 1 << 2;
-
 pub const Permission = struct {
-    collection: []u8,
-    mode: u8,
+    can_write: bool,
+    can_read: bool,
 };
 
 pub const Account = struct {

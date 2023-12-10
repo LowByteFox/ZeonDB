@@ -53,7 +53,7 @@ pub const DB = struct {
         try self.net.run(self, &allocator);
     }
 
-    pub fn execute(self: *DB, script: [:0]u8, allocator: std.mem.Allocator) !ctx.ZqlTrace {
+    pub fn execute(self: *DB, script: [:0]u8, username: []const u8, allocator: std.mem.Allocator) !ctx.ZqlTrace {
         var parse = parser.Parser.init(&self.db, script);
         var args = try parse.parse(allocator);
         defer args.deinit();
@@ -62,6 +62,7 @@ pub const DB = struct {
         var free_val: bool = false;
 
         for (args.items) |*context| {
+            try context.set_user(username, allocator);
             defer context.deinit(allocator);
             var err = context.execute(shared_buffer, allocator) catch |e| {
                 if (shared_buffer) |shared| {

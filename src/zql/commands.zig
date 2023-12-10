@@ -32,6 +32,9 @@ fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     ctx.sweep_arg(0);
     var arg1 = ctx.get_arg(0).?;
 
+    const user = ctx.get_user();
+    const perm = ctx.db.get_perm(user, "$", allocator);
+
     if (std.mem.eql(u8, arg1.String[0..1], "$")) {
         var v = try allocator.create(types.Value);
         v.* = .{ .Collection = ctx.db.* };

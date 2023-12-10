@@ -75,14 +75,16 @@ fn handle_frame(self: *cl.Client) void {
                     self.send_message() catch unreachable;
                     return;
                 };
+
+                self.user = allocator.realloc(self.user, username.len) catch unreachable;
+                @memcpy(self.user, username);
+
                 self.frame.status = @enumFromInt(3);
                 @memset(&msg, 0);
                 utils.copy_over(&msg, 0, "OK");
                 self.frame.write_buffer(&msg);
                 self.frame.to_buffer(msg.len);
                 self.send_message() catch unreachable;
-                self.user = allocator.realloc(self.user, username.len) catch unreachable;
-                @memcpy(self.user, username);
             } else {
                 self.frame.status = @enumFromInt(3);
                 @memset(&msg, 0);
@@ -116,7 +118,7 @@ fn handle_frame(self: *cl.Client) void {
 
             var buffer: [1015]u8 = undefined;
 
-            var result = self.server.db.?.execute(self.command_buffer.?, allocator.*) catch |e| {
+            var result = self.server.db.?.execute(self.command_buffer.?, self.user, allocator.*) catch |e| {
                 var printed = std.fmt.bufPrint(&buffer, "{}", .{e}) catch unreachable; 
                 self.frame.status = .Error;
                 self.frame.to_buffer(printed.len);

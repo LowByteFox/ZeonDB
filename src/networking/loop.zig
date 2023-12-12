@@ -147,7 +147,11 @@ fn handle_frame(self: *cl.Client) void {
                     str = types.stringify(v, types.FormatType.ZQL, allocator.*) catch unreachable;
                 }
 
-                if (result.free_value) {
+                if (result.free_value.deinit) {
+                    types.dispose(v, allocator.*);
+                }
+
+                if (result.free_value.free and !result.free_value.deinit) {
                     allocator.destroy(v);
                 }
 

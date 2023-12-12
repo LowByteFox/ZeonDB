@@ -31,13 +31,22 @@ pub const Parser = struct {
             if (cmds.commands.get(tok.text)) |command| {
                 var context = ctx.ZqlContext.init(self.db, allocator);
 
-                for (0..@intCast(command.arg_count)) |_| {
-                    var arg = try self.parse_value(allocator);
+                while (true) {
+                    tok = try self.lexer.parse_token();
+ 
+                    if ((tok.type == lex.TokenTypes.identifier and cmds.commands.get(tok.text) != null) or tok.type == lex.TokenTypes.eof or tok.type == lex.TokenTypes.semicolon) {
+                        if (tok.type == lex.TokenTypes.identifier) {
+                            try self.lexer.step_back(tok.text.len);
+                        }
+                        break;
+                    }
+
+                    var arg = try self.parse_value(tok, allocator);
 
                     try context.add_arg(arg);
                 }
 
-                context.set_fn(command.func);
+                context.set_fn(command);
 
                 try contexts.append(context);
             } else {
@@ -76,18 +85,10 @@ pub const Parser = struct {
         return v;
     }
 
-    fn test_identifier(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) !?*ctx.ZqlTrace {
-        if (cmds.commands.has(tok.text)) {
-            return null;
-        }
-
-        return try self.init_trace_val(try self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator), allocator);
-    }
-
     fn parse_primitive_value(self: *@This(), tok: lex.Token, allocator: std.mem.Allocator) anyerror!?*ctx.ZqlTrace { 
         switch(tok.type) {
             lex.TokenTypes.identifier => {
-                return try self.test_identifier(tok, allocator);
+                return try self.init_trace_val(try self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator), allocator);
             },
             lex.TokenTypes.string => {
                 return try self.init_trace_val(try self.init_value(.{ .String = try utils.strdup(tok.text, allocator) }, allocator), allocator);
@@ -109,7 +110,7 @@ pub const Parser = struct {
             },
             lex.TokenTypes.lsquarebracket, lex.TokenTypes.lsquiglybracket => {
                 try self.lexer.step_back(1);
-                return try self.parse_value(allocator);
+                return try self.parse_value(tok, allocator);
             },
             else => {
                 return null;
@@ -117,8 +118,9 @@ pub const Parser = struct {
         }
     }
 
-    fn parse_value(self: *@This(), allocator: std.mem.Allocator) !*ctx.ZqlTrace {
-        var tok = try self.lexer.parse_token();
+    fn parse_value(self: *@This(), token: lex.Token, allocator: std.mem.Allocator) !*ctx.ZqlTrace {
+        var tok = token;
+
         if (tok.type == lex.TokenTypes.eof) {
             return try self.init_trace_err(try std.fmt.allocPrint(allocator, "Expected value at {}:{} but got EOF!", .{tok.line, tok.col}), allocator);
         }

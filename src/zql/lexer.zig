@@ -10,6 +10,7 @@ pub const TokenTypes = enum {
     float,
     bool,
     colon,
+    semicolon,
     comma,
     lsquarebracket,
     rsquarebracket,
@@ -197,6 +198,14 @@ pub const Lexer = struct {
                 return Token{
                     .text = ":",
                     .type = TokenTypes.colon,
+                    .col = self.col,
+                    .line = self.line,
+                };
+            },
+            ';' => {
+                return Token{
+                    .text = ":",
+                    .type = TokenTypes.semicolon,
                     .col = self.col,
                     .line = self.line,
                 };

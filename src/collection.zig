@@ -41,6 +41,7 @@ pub const Collection = struct {
         if (perm) |p| {
             return p.*;
         }
+
         return null;
     }
 

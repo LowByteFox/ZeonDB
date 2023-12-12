@@ -18,6 +18,7 @@ const default_config = \\format = "JSON"
                        \\max_length = 32
                        \\
                        \\[communication]
+                       \\max_connections = 1000
                        \\[communication.ip]
                        \\enable = true
                        \\port = 6748
@@ -43,6 +44,7 @@ pub const Config = struct {
         },
     },
     communication: ?struct {
+        max_connections: usize,
         ip: ?struct {
             enable: bool,
             port: ?u16

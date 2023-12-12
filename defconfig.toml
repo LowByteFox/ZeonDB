@@ -21,9 +21,3 @@ max_connections = 1000
 [communication.ip]
 enable = true
 port = 6748
-
-# user -> user allowed to "bypass" auth limited to only one workspace
-# workspace -> a path to collection used for isolation
-# mode -> r | w | rw - permission mode (r allows GET requests, w allows POST requests)
-[communication.html]
-enable = false

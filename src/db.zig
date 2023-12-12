@@ -59,7 +59,7 @@ pub const DB = struct {
         defer args.deinit();
 
         var shared_buffer: ?*types.Value = null;
-        var free_val: bool = false;
+        var free_val: ctx.BufferMng = .{ .free = false, .deinit = false };
 
         for (args.items) |*context| {
             try context.set_user(username, allocator);
@@ -70,6 +70,14 @@ pub const DB = struct {
                 }
                 return e;
             };
+
+            if (free_val.deinit) {
+                types.dispose(shared_buffer.?, allocator);
+            }
+
+            if (free_val.free and !free_val.deinit) {
+                allocator.destroy(shared_buffer.?);
+            }
 
             if (err) |e| {
                 for (0..context.get_arg_count()) |i| {
@@ -82,9 +90,6 @@ pub const DB = struct {
                 return .{ .value = null, .err = e, .free_value = free_val };
             }
 
-            if (free_val) {
-                allocator.destroy(shared_buffer.?);
-            }
             free_val = context.free_buffer;
             shared_buffer = context.buffer;
         }

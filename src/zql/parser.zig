@@ -34,7 +34,7 @@ pub const Parser = struct {
                 while (true) {
                     tok = try self.lexer.parse_token();
  
-                    if ((tok.type == lex.TokenTypes.identifier and cmds.commands.get(tok.text) != null) or tok.type == lex.TokenTypes.eof or tok.type == lex.TokenTypes.semicolon) {
+                    if (tok.type == lex.TokenTypes.eof or tok.type == lex.TokenTypes.semicolon) {
                         if (tok.type == lex.TokenTypes.identifier) {
                             try self.lexer.step_back(tok.text.len);
                         }
@@ -42,7 +42,6 @@ pub const Parser = struct {
                     }
 
                     var arg = try self.parse_value(tok, allocator);
-
                     try context.add_arg(arg);
                 }
 

@@ -3,6 +3,7 @@ const context = @import("ctx.zig");
 const types = @import("../types.zig");
 const collection = @import("../collection.zig");
 const accs = @import("../accounts.zig");
+const auth = @import("commands/auth.zig");
 
 fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     if (ctx.get_arg_count() != 2) {
@@ -27,64 +28,38 @@ fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 
     while (split.next()) |s| {
         if (split.peek() == null) {
-            try current.assign_perm(user, s, perm.?, allocator);
             try current.add(s, arg2, allocator);
             break;
         }
 
         if (current.get(s)) |cur| {
-            perm = try current.get_perm(user, s, allocator);
+            var tmp_perm = try current.get_perm(user, s, allocator);
+
+            if (tmp_perm) |p| {
+                perm = p;
+            }
 
             if (!perm.?.can_write) {
                 ctx.err = try std.fmt.allocPrint(allocator, "Permissions denied, unable to write!", .{});
                 return;
             }
+
+            switch (cur.*) {
+                types.Value.Collection => {},
+                else => {
+                    ctx.err = try std.fmt.allocPrint(allocator, "Key \"{s}\" was expected to be Collection, but got {s}!", .{s, @tagName(cur.*)});
+                    return;
+                }
+            }
+
             current = &cur.Collection;
             continue;
         }
 
         var v = try allocator.create(types.Value);
         v.* = .{ .Collection = try collection.Collection.init(allocator) };
-        try current.assign_perm(user, s, perm.?, allocator);
         try current.add(s, v, allocator);
         current = &v.Collection;
-    }
-}
-
-fn allocate_value(val: types.Value, allocator: std.mem.Allocator) !*types.Value {
-    var v = try allocator.create(types.Value);
-    v.* = val;
-    return v;
-}
-
-fn perm_to_collection(perm: accs.Permission, allocator: std.mem.Allocator) !*types.Value {
-    var v = try allocator.create(types.Value);
-    v.* = .{ .Collection = try collection.Collection.init(allocator) };
-    try v.Collection.add("can_read", try allocate_value(.{ .Bool = perm.can_read }, allocator),allocator);
-    try v.Collection.add("can_write", try allocate_value(.{ .Bool = perm.can_write }, allocator),allocator);
-    return v;
-}
-
-fn auth(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
-    switch (ctx.get_arg_count()) {
-        else => {
-            ctx.err = try std.fmt.allocPrint(allocator, \\auth (subcommand) [...]
-                \\get <path> -- return permissions set on that specific path
-                , .{});
-        },
-        1 => {
-            var arg1 = ctx.get_arg(0).?;
-            ctx.sweep_arg(0);
-
-            if (std.mem.eql(u8, arg1.String[0..1], "$")) {
-                const user = ctx.get_user();
-                var perm = try ctx.db.get_perm(user, "$", allocator);
-                var v = try perm_to_collection(perm.?, allocator);
-                ctx.buffer = v;
-                ctx.free_buffer = .{ .free = true, .deinit = true };
-                return;
-            }
-        }
     }
 }
 
@@ -118,7 +93,11 @@ fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 
     while (split.next()) |s| {
         if (split.peek() == null) {
-            perm = try ctx.db.get_perm(user, s, allocator);
+            var tmp_perm = try current.get_perm(user, s, allocator);
+
+            if (tmp_perm) |p| {
+                perm = p;
+            }
 
             if (!perm.?.can_read) {
                 ctx.err = try std.fmt.allocPrint(allocator, "Permissions denied, unable to read!", .{});
@@ -135,11 +114,23 @@ fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
         }
 
         if (current.get(s)) |cur| {
-            perm = try ctx.db.get_perm(user, s, allocator);
+            var tmp_perm = try current.get_perm(user, s, allocator);
+
+            if (tmp_perm) |p| {
+                perm = p;
+            }
 
             if (!perm.?.can_read) {
                 ctx.err = try std.fmt.allocPrint(allocator, "Permissions denied, unable to read!", .{});
                 return;
+            }
+
+            switch (cur.*) {
+                types.Value.Collection => {},
+                else => {
+                    ctx.err = try std.fmt.allocPrint(allocator, "Key \"{s}\" was expected to be Collection, but got {s}!", .{s, @tagName(cur.*)});
+                    return;
+                }
             }
 
             current = &cur.Collection;
@@ -158,6 +149,6 @@ pub const commands = std.ComptimeStringMap(context.ZqlFunc, .{
         "get", get,
     },
     .{
-        "auth", auth,
+        "auth", auth.auth,
     }
 });

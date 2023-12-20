@@ -12,7 +12,6 @@ pub fn set(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void
 
     var arg1 = ctx.get_arg(0).?;
     var arg2 = ctx.get_arg(1).?;
-    defer arg1.deinit();
 
     const user = ctx.get_user();
     var perm = try ctx.db.get_perm(user, "$", allocator);

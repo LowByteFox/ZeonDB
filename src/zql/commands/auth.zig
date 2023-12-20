@@ -26,7 +26,6 @@ fn perm_to_collection(perm: accs.Permission, allocator: std.mem.Allocator) !*mem
 
 fn auth_get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     var arg1 = ctx.get_arg(1).?;
-    defer arg1.deinit();
 
     const user = ctx.get_user();
     var perm = try ctx.db.get_perm(user, "$", allocator);
@@ -91,7 +90,6 @@ pub fn auth(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!voi
         },
         2 => {
             var arg1 = ctx.get_arg(0).?;
-            defer arg1.deinit();
 
             switch (arg1.value) {
                 types.Value.String => {},

@@ -76,11 +76,6 @@ pub const DB = struct {
             };
 
             if (err) |e| {
-                for (context.args.items) |item| {
-                    if (item.value) |v| {
-                        v.deinit();
-                    }
-                }
                 return .{ .value = null, .err = e };
             }
 

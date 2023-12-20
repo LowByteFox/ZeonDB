@@ -147,13 +147,7 @@ fn handle_frame(self: *cl.Client) void {
                     str = types.stringify(v, types.FormatType.ZQL, allocator.*) catch unreachable;
                 }
 
-                if (result.free_value.deinit) {
-                    types.dispose(v, allocator.*);
-                }
-
-                if (result.free_value.free and !result.free_value.deinit) {
-                    allocator.destroy(v);
-                }
+                v.deinit();
 
                 var printed = std.fmt.bufPrint(&buffer, "{s}", .{str}) catch unreachable; 
                 self.frame.status = .Command;
@@ -177,6 +171,7 @@ fn handle_frame(self: *cl.Client) void {
 
 fn close_client(handle: [*c]uv.uv_handle_t) callconv(.C) void {
     var data = extract_data(cl.Client, @ptrCast(handle));
+    uv.uv_stop(data.server.loop);
     data.deinit(data.server.allocator.?.*);
 }
 

@@ -8,6 +8,7 @@ pub const Collection = struct {
     db: std.StringHashMap(*mem.AutoPtr(types.Value)),
     keys: std.ArrayList([]const u8),
     perms: std.StringHashMap(accounts.Permission),
+    perm_names: std.ArrayList([]u8),
 
     const Self = @This();
 
@@ -15,7 +16,8 @@ pub const Collection = struct {
         return Collection{
             .db = std.StringHashMap(*mem.AutoPtr(types.Value)).init(allocator),
             .keys = std.ArrayList([]const u8).init(allocator),
-            .perms = std.StringHashMap(accounts.Permission).init(allocator)
+            .perms = std.StringHashMap(accounts.Permission).init(allocator),
+            .perm_names = std.ArrayList([]u8).init(allocator),
         };
     }
 
@@ -29,15 +31,20 @@ pub const Collection = struct {
 
             allocator.free(key);
         }
+        for (self.perm_names.items) |i| {
+            allocator.free(i);
+        }
         self.db.deinit();
 
         self.keys.deinit();
         self.perms.deinit();
+        self.perm_names.deinit();
     }
 
     pub fn assign_perm(self: *Collection, username: []const u8, key: []const u8, perm: accounts.Permission, allocator: std.mem.Allocator) !void {
         var buffer = try std.fmt.allocPrint(allocator, "{s}:{s}", .{username, key});
         try self.perms.put(buffer, perm);
+        try self.perm_names.append(buffer);
     }
 
     pub fn get_perm(self: *Collection, username: []const u8, key: []const u8, allocator: std.mem.Allocator) !?accounts.Permission {
@@ -105,7 +112,7 @@ pub const Collection = struct {
             utils.copy_over(str, old_len, key_str.?);
             allocator.free(key_str.?);
 
-            var value = try types.stringify(&self.get(key).?.value, format, allocator);
+            var value = try types.stringify(self.get(key).?, format, allocator);
             old_len = str.len;
 
             str = try allocator.realloc(str, str.len + value.len + 2);

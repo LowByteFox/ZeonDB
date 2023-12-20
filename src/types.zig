@@ -1,6 +1,7 @@
 const std = @import("std");
 const collection = @import("collection.zig");
 const utils = @import("utils.zig");
+const mem = @import("memory");
 
 pub const FormatType = enum {
     ZQL,
@@ -17,7 +18,7 @@ pub const Types = enum {
 };
 
 pub const Value = union(Types) {
-    Array: std.ArrayList(*Value),
+    Array: std.ArrayList(*mem.AutoPtr(Value)),
     String: []const u8,
     Int: i64,
     Float: f64,
@@ -30,7 +31,7 @@ pub fn clone_value(val: *Value, allocator: std.mem.Allocator) !*Value {
     _ = val;
 }
 
-pub fn stringifyArray(array: *std.ArrayList(*Value), format: FormatType, allocator: std.mem.Allocator) ![]u8 {
+pub fn stringifyArray(array: *std.ArrayList(*mem.AutoPtr(Value)), format: FormatType, allocator: std.mem.Allocator) ![]u8 {
     var str = try utils.strdup("[", allocator);
 
     for (array.items) |item| {
@@ -65,38 +66,38 @@ pub fn stringifyArray(array: *std.ArrayList(*Value), format: FormatType, allocat
     return str;
 }
 
-pub fn stringify(val: *Value, format: FormatType, allocator: std.mem.Allocator) anyerror![]u8 {
-    switch (val.*) {
+pub fn stringify(val: *mem.AutoPtr(Value), format: FormatType, allocator: std.mem.Allocator) anyerror![]u8 {
+    switch (val.value) {
         Value.String => {
-            if (utils.includes(val.String, ' ') or format == .JSON) {
-                return std.fmt.allocPrint(allocator, "\"{s}\"", .{val.String});
+            if (utils.includes(val.value.String, ' ') or format == .JSON) {
+                return std.fmt.allocPrint(allocator, "\"{s}\"", .{val.value.String});
             }
-            return utils.strdup(val.String, allocator);
+            return utils.strdup(val.value.String, allocator);
         },
         Value.Int => {
-            return std.fmt.allocPrint(allocator, "{d}", .{val.Int});
+            return std.fmt.allocPrint(allocator, "{d}", .{val.value.Int});
         },
         Value.Float => {
-            return std.fmt.allocPrint(allocator, "{d}", .{val.Float});
+            return std.fmt.allocPrint(allocator, "{d}", .{val.value.Float});
         },
         Value.Bool => {
-            if (val.Bool) {
+            if (val.value.Bool) {
                 return utils.strdup("true", allocator);
             }
             return utils.strdup("false", allocator);
         },
         Value.Array => {
-            return stringifyArray(&val.Array, format, allocator);
+            return stringifyArray(&val.value.Array, format, allocator);
         },
         Value.Collection => {
-            return val.Collection.stringify(format, allocator);
+            return val.value.Collection.stringify(format, allocator);
         }
     }
 }
 
-pub fn disposeArray(array: *std.ArrayList(*Value), allocator: std.mem.Allocator) void {
+pub fn disposeArray(array: *std.ArrayList(*mem.AutoPtr(Value))) void {
     for (array.items) |i| {
-        dispose(i, allocator);
+        i.deinit();
     }
 }
 
@@ -106,7 +107,7 @@ pub fn dispose(val: *Value, allocator: std.mem.Allocator) void {
             allocator.free(val.String);
         },
         Value.Array => {
-            disposeArray(&val.Array, allocator);
+            disposeArray(&val.Array);
             val.Array.deinit();
         },
         Value.Collection => {

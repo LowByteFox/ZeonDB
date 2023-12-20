@@ -3,29 +3,42 @@ const context = @import("../ctx.zig");
 const types = @import("../../types.zig");
 const collection = @import("../../collection.zig");
 const accs = @import("../../accounts.zig");
-const utils = @import("utils.zig");
+const mem = @import("memory");
 
-fn perm_to_collection(perm: accs.Permission, allocator: std.mem.Allocator) !*types.Value {
-    var v = try allocator.create(types.Value);
-    v.* = .{ .Collection = try collection.Collection.init(allocator) };
-    try v.Collection.add("can_read", try utils.allocate_value(.{ .Bool = perm.can_read }, allocator),allocator);
-    try v.Collection.add("can_write", try utils.allocate_value(.{ .Bool = perm.can_write }, allocator),allocator);
-    return v;
+fn perm_to_collection(perm: accs.Permission, allocator: std.mem.Allocator) !*mem.AutoPtr(types.Value) {
+    var v = try mem.AutoPtr(types.Value).init(allocator, .{ .Collection = try collection.Collection.init(allocator) });
+    defer v.deinit();
+    v.set_on_free(types.dispose);
+
+    var read = try mem.AutoPtr(types.Value).init(allocator, .{ .Bool = perm.can_read });
+    defer read.deinit();
+    var write = try mem.AutoPtr(types.Value).init(allocator, .{ .Bool = perm.can_write });
+    defer write.deinit();
+
+    read.set_on_free(types.dispose);
+    write.set_on_free(types.dispose);
+
+    try v.value.Collection.add("can_read", read.move(), allocator);
+    try v.value.Collection.add("can_write", write.move(), allocator);
+
+    return v.move();
 }
 
 fn auth_get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
     var arg1 = ctx.get_arg(1).?;
+    defer arg1.deinit();
+
     const user = ctx.get_user();
     var perm = try ctx.db.get_perm(user, "$", allocator);
 
-    if (std.mem.eql(u8, arg1.String[0..1], "$")) {
+    if (std.mem.eql(u8, arg1.value.String[0..1], "$")) {
         var v = try perm_to_collection(perm.?, allocator);
-        ctx.buffer = v;
-        ctx.free_buffer = .{ .free = true, .deinit = true };
+        defer v.deinit();
+        ctx.buffer = v.move();
         return;
     }
 
-    var split = std.mem.splitScalar(u8, arg1.String, '.');
+    var split = std.mem.splitScalar(u8, arg1.value.String, '.');
     var current = ctx.db;
 
     while (split.next()) |s| {
@@ -37,8 +50,8 @@ fn auth_get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!voi
             }
 
             var v = try perm_to_collection(perm.?, allocator);
-            ctx.buffer = v;
-            ctx.free_buffer = .{ .free = true, .deinit = true };
+            defer v.deinit();
+            ctx.buffer = v.move();
             break;
         }
 
@@ -49,18 +62,18 @@ fn auth_get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!voi
                 perm = p;
             }
 
-            switch (cur.*) {
+            switch (cur.value) {
                 types.Value.Collection => {},
                 else => {
-                    ctx.err = try std.fmt.allocPrint(allocator, "Key \"{s}\" was expected to be Collection, but got {s}!", .{s, @tagName(cur.*)});
+                    ctx.err = try std.fmt.allocPrint(allocator, "Key \"{s}\" was expected to be Collection, but got {s}!", .{s, @tagName(cur.value)});
                     return;
                 }
             }
 
-            current = &cur.Collection;
+            current = &cur.value.Collection;
             continue;
         }
-        ctx.err = try std.fmt.allocPrint(allocator, "No such key \"{s}\"!", .{arg1.String});
+        ctx.err = try std.fmt.allocPrint(allocator, "No such key \"{s}\"!", .{arg1.value.String});
         break;
     }
 
@@ -77,12 +90,10 @@ pub fn auth(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!voi
                 , .{});
         },
         2 => {
-            ctx.sweep_arg(0);
-            ctx.sweep_arg(1);
-
             var arg1 = ctx.get_arg(0).?;
+            defer arg1.deinit();
 
-            switch (arg1.*) {
+            switch (arg1.value) {
                 types.Value.String => {},
                 else => {
                     ctx.err = try std.fmt.allocPrint(allocator, "Argument 0 is not a String!", .{});
@@ -90,14 +101,11 @@ pub fn auth(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!voi
                 }
             }
 
-            if (arg1.String.len >= 3 and std.mem.eql(u8, arg1.String, "get")) {
+            if (arg1.value.String.len >= 3 and std.mem.eql(u8, arg1.value.String, "get")) {
                 try auth_get(ctx, allocator);
             }
         },
         3 => {
-            ctx.sweep_arg(0);
-            ctx.sweep_arg(1);
-            ctx.sweep_arg(2);
         }
     }
 }

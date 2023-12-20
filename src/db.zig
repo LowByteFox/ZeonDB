@@ -7,6 +7,7 @@ const network = @import("networking/loop.zig");
 const types = @import("types.zig");
 const ctx = @import("zql/ctx.zig");
 const toml = @import("ztoml");
+const mem = @import("memory");
 
 pub const DB = struct {
     db: collection.Collection,
@@ -58,42 +59,47 @@ pub const DB = struct {
         var args = try parse.parse(allocator);
         defer args.deinit();
 
-        var shared_buffer: ?*types.Value = null;
-        var free_val: ctx.BufferMng = .{ .free = false, .deinit = false };
+        var shared_buffer: ?*mem.AutoPtr(types.Value) = null;
+        defer if (shared_buffer != null) {
+            shared_buffer.?.deinit();
+        };
 
         for (args.items) |*context| {
-            try context.set_user(username, allocator);
-            defer context.deinit(allocator);
+            context.set_user(username);
+            defer context.deinit();
+
             var err = context.execute(shared_buffer, allocator) catch |e| {
                 if (shared_buffer) |shared| {
-                    types.dispose(shared, allocator);
+                    shared.deinit();
                 }
                 return e;
             };
 
-            if (free_val.deinit) {
-                types.dispose(shared_buffer.?, allocator);
-            }
-
-            if (free_val.free and !free_val.deinit) {
-                allocator.destroy(shared_buffer.?);
-            }
-
             if (err) |e| {
-                for (0..context.get_arg_count()) |i| {
-                    context.sweep_arg(i);
+                for (context.args.items) |item| {
+                    if (item.value) |v| {
+                        v.deinit();
+                    }
                 }
-                return .{ .value = null, .err = e, .free_value = free_val };
+                return .{ .value = null, .err = e };
             }
 
             if (context.err) |e| {
-                return .{ .value = null, .err = e, .free_value = free_val };
+                return .{ .value = null, .err = e };
             }
 
-            free_val = context.free_buffer;
-            shared_buffer = context.buffer;
+            defer if (context.buffer != null) {
+                context.buffer.?.deinit();
+            };
+
+            if (context.buffer == null) continue;
+            shared_buffer = context.buffer.?.move();
         }
 
-        return .{ .value = shared_buffer, .err = null, .free_value = free_val };
+        if (shared_buffer == null) {
+            return .{ .value = null, .err = null };
+        } else {
+            return .{ .value = shared_buffer.?.move(), .err = null };
+        }
     }
 };

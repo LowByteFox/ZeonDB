@@ -6,6 +6,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     var network_mod = b.addModule("networking", .{ .source_file = .{ .path = "src/networking/main.zig" } });
+    var mem_mod = b.addModule("memory", .{ .source_file = .{ .path = "src/memory/auto_ptr.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "ZeonDB",
@@ -24,6 +25,7 @@ pub fn build(b: *std.Build) void {
     const toml = b.dependency("zigtoml", .{ .target = target, .optimize = optimize });
     exe.addModule("ztoml", toml.module("zig-toml"));
     exe.addModule("networking", network_mod);
+    exe.addModule("memory", mem_mod);
 
     client.addModule("networking", network_mod);
 

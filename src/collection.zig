@@ -60,13 +60,14 @@ pub const Collection = struct {
     }
 
     pub fn add(self: *Collection, key: []const u8, value: *mem.AutoPtr(types.Value), allocator: std.mem.Allocator) !void {
-        const val = self.db.getPtr(key);
+        var cloned = try utils.strdup(key, allocator);
+        const val = self.db.getPtr(cloned);
 
         if (val) |v| {
             v.*.deinit();
             v.* = value;
         } else {
-            try self.db.put(key, value);
+            try self.db.put(cloned, value);
         }
 
         var add_key: bool = true;
@@ -79,7 +80,7 @@ pub const Collection = struct {
         }
 
         if (add_key) {
-            try self.keys.append(try utils.strdup(key, allocator));
+            try self.keys.append(cloned);
         }
     }
 

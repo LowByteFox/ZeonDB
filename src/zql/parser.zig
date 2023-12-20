@@ -205,7 +205,7 @@ pub const Parser = struct {
                 if (obj_value.?.err) |_| {
                     return obj_value.?;
                 }
-                try obj.add(obj_key, obj_value.?.value.?, allocator);
+                // try obj.add(obj_key, obj_value.?.value.?, allocator);
 
                 tok = try self.lexer.parse_token();
                 if (tok.type != lex.TokenTypes.comma) {

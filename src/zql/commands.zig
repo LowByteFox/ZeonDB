@@ -106,7 +106,7 @@ fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 
             var val = current.get(s);
             if (val) |v| {
-                ctx.buffer = v;
+                ctx.buffer = v.value;
             } else {
                 ctx.err = try std.fmt.allocPrint(allocator, "No such key \"{s}\"!", .{arg1.String});
             }
@@ -142,12 +142,12 @@ fn get(ctx: *context.ZqlContext, allocator: std.mem.Allocator) anyerror!void {
 }
 
 pub const commands = std.ComptimeStringMap(context.ZqlFunc, .{
-    .{
-        "set", set,
-    },
-    .{
-        "get", get,
-    },
+//    .{
+//        "set", set,
+//    },
+//    .{
+//        "get", get,
+//    },
     .{
         "auth", auth.auth,
     }

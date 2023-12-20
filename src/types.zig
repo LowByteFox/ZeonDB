@@ -114,5 +114,4 @@ pub fn dispose(val: *Value, allocator: std.mem.Allocator) void {
         },
         else => {}
     }
-    allocator.destroy(val);
 }

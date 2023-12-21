@@ -1,7 +1,7 @@
 const std = @import("std");
 const networking = @import("networking");
 const uv = networking.uv;
-const cbuffer = @import("cbuffer.zig");
+const mem = @import("memory");
 
 const ZeonResType = enum(c_int) {
     ZEON_OK,
@@ -11,9 +11,9 @@ const ZeonResType = enum(c_int) {
 
 pub const ZeonResult = extern struct {
     type: ZeonResType,
-    data: cbuffer.CBuffer,
+    data: mem.CBuffer,
 
-    pub fn init(typ: ZeonResType, buff: cbuffer.CBuffer) ZeonResult {
+    pub fn init(typ: ZeonResType, buff: mem.CBuffer) ZeonResult {
         return .{
             .type = typ,
             .data = buff
@@ -23,7 +23,7 @@ pub const ZeonResult = extern struct {
     pub fn init_slice(typ: ZeonResType, slice: []u8) ZeonResult {
         return .{
             .type = typ,
-            .data = cbuffer.CBuffer.from_slice(slice).?
+            .data = mem.CBuffer.from_slice(slice).?
         };
     }
 
@@ -37,8 +37,8 @@ pub const ZeonConnection = extern struct {
     tcp: uv.uv_tcp_t,
     conn: uv.uv_connect_t,
     addr: std.os.sockaddr.in,
-    frame_buffer: cbuffer.CBuffer,
-    transfer_buffer: cbuffer.CBuffer,
+    frame_buffer: mem.CBuffer,
+    transfer_buffer: mem.CBuffer,
     authenticated: bool,
     frame: networking.frame.ZeonFrame,
     res: ZeonResult
@@ -204,8 +204,8 @@ pub fn zeon_connection_init(ip: []const u8, port: u16) ?*ZeonConnection {
         ptr.authenticated = false;
         ptr.res = ZeonResult.init_slice(.ZEON_OK, @ptrCast(@constCast("OK")));
 
-        ptr.frame_buffer = cbuffer.CBuffer.init();
-        ptr.transfer_buffer = cbuffer.CBuffer.init();
+        ptr.frame_buffer = mem.CBuffer.init();
+        ptr.transfer_buffer = mem.CBuffer.init();
 
         _ = uv.uv_tcp_init(ptr.loop, @ptrCast(&ptr.tcp));
         _ = uv.uv_tcp_connect(@ptrCast(&ptr.conn), @ptrCast(&ptr.tcp), @ptrCast(&ptr.addr), &on_connect);
@@ -283,11 +283,17 @@ pub fn zeon_connection_execute(conn: *ZeonConnection, script: []const u8) *ZeonR
     return &conn.res;
 }
 
-pub fn zeon_connection_deinit(conn: *ZeonConnection) void {
+fn on_close(handle: [*c]uv.uv_handle_t) callconv(.C) void {
+    var conn = networking.loop.extract_data(ZeonConnection, @ptrCast(handle));
     if (conn.res.data.buffer) |_| {
         conn.res.deinit();
     }
+
     std.c.free(conn);
+}
+
+pub fn zeon_connection_deinit(conn: *ZeonConnection) void {
+    uv.uv_close(@ptrCast(&conn.tcp), &on_close);
 }
 
 pub fn zeon_connection_dead(conn: *ZeonConnection) bool {

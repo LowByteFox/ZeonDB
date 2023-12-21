@@ -201,9 +201,6 @@ pub const Parser = struct {
                 tok = try self.lexer.parse_token();
                 if (tok.type != lex.TokenTypes.comma) {
                     try self.lexer.step_back(@intCast(tok.text.len));
-                    if (tok.type == lex.TokenTypes.string) {
-                        try self.lexer.step_back(2);
-                    }
                 }
             }
 

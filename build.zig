@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     var network_mod = b.addModule("networking", .{ .source_file = .{ .path = "src/networking/main.zig" } });
-    var mem_mod = b.addModule("memory", .{ .source_file = .{ .path = "src/memory/auto_ptr.zig" } });
+    var mem_mod = b.addModule("memory", .{ .source_file = .{ .path = "src/memory/main.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "ZeonDB",
@@ -28,6 +28,7 @@ pub fn build(b: *std.Build) void {
     exe.addModule("memory", mem_mod);
 
     client.addModule("networking", network_mod);
+    client.addModule("memory", mem_mod);
 
     b.installArtifact(client);
     b.installArtifact(exe);

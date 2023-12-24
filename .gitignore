@@ -1,6 +1,7 @@
 zig-*/
 libs/
 build/
+subprojects/
 
 # OpenBSD
 *.core

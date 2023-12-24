@@ -1,8 +1,10 @@
-#include <types.hpp>
 #include <cstdint>
 #include <memory>
 #include <vector>
 #include <string>
+
+#include <types.hpp>
+#include <collection.hpp>
 
 namespace ZeonDB::Types {
 	std::shared_ptr<Value> Value::new_array() {
@@ -36,6 +38,12 @@ namespace ZeonDB::Types {
 		auto ptr = std::make_shared<Value>();
 		ptr->t = Type::Bool;
 		ptr->v.b = initial_value;
+		return ptr;
+	}
+
+	std::shared_ptr<Value> Value::new_collection() {
+		auto ptr = std::make_shared<Value>();
+		ptr->t = Type::Collection;
 		return ptr;
 	}
 

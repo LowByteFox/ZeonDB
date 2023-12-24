@@ -39,6 +39,7 @@ namespace ZeonDB::Types {
 		static std::shared_ptr<Value> new_int(int64_t);
 		static std::shared_ptr<Value> new_float(double);
 		static std::shared_ptr<Value> new_bool(bool);
+		static std::shared_ptr<Value> new_collection();
 
 		void array_append(std::shared_ptr<Value>);
 		std::string stringify(FormatType);

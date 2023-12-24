@@ -6,6 +6,8 @@
 #include <memory>
 #include <vector>
 
+#include <collection.hpp>
+
 namespace ZeonDB::Types {
 	enum class FormatType {
 		ZQL,
@@ -29,6 +31,7 @@ namespace ZeonDB::Types {
 			int64_t i;
 			double f;
 			bool b;
+			ZeonDB::Collection c;
 		} v;
 
 		static std::shared_ptr<Value> new_array();

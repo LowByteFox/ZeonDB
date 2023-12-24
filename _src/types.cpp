@@ -5,7 +5,6 @@
 #include <string>
 
 namespace ZeonDB::Types {
-
 	std::shared_ptr<Value> Value::new_array() {
 		auto ptr = std::make_shared<Value>();
 		ptr->t = Type::Array;
@@ -70,13 +69,19 @@ namespace ZeonDB::Types {
 			case Type::Array:
 				return this->stringify_array(fmtType);
 			case Type::String:
-				return "\"" + this->v.s + "\"";
+				if (this->v.s.find(' ') != std::string::npos || fmtType == FormatType::JSON) {
+					return "\"" + this->v.s + "\"";
+				} else {
+					return this->v.s;
+				}
 			case Type::Int:
 				return std::to_string(this->v.i);
 			case Type::Float:
 				return std::to_string(this->v.f);
 			case Type::Bool:
 				return std::to_string(this->v.b);
+			case Type::Collection:
+				return this->v.c.stringify(fmtType);
 		}
 		return "??";
 	}

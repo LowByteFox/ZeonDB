@@ -7,7 +7,7 @@
 namespace ZeonDB::ZQL {
 	char Lexer::read_char() {
 		if (this->pos - 1 == this->len) return 0;
-		char current = this->text[this->pos];
+		char current = this->code[this->pos];
 		this->pos++;
 		this->col++;
 		return current;
@@ -42,17 +42,17 @@ namespace ZeonDB::ZQL {
         char current = this->read_char();
 
         while (current != '\n') {
-            current = self.read_char();
+            current = this->read_char();
         }
 
         this->col = 0;
-        self->line += 1;
+        this->line += 1;
 	}
 
 	Token Lexer::tokenize_identifier() {
 		Token tok;
 		tok.type = TokenTypes::identifier;
-		tok.col = this->col;
+		tok.col = this->pos;
         tok.line = this->line;
 
 		char current = this->read_char();
@@ -62,11 +62,11 @@ namespace ZeonDB::ZQL {
 		}
 
 		this->step_back(1);
-		tok.len = this->col - tok.col;
+		tok.len = this->pos - tok.col;
 
-		if (this->text.find("true", tok.col) != std::string::npos) {
+		if (this->code.find("true", tok.col) != std::string::npos) {
 			tok.type = TokenTypes::boolean;
-		} else if (this->text.find("false", tok.col) != std::string::npos)  {
+		} else if (this->code.find("false", tok.col) != std::string::npos)  {
 			tok.type = TokenTypes::boolean;
 		}
 
@@ -74,6 +74,150 @@ namespace ZeonDB::ZQL {
 	}
 
 	Token Lexer::tokenize_number() {
+		Token tok;
+		tok.type = TokenTypes::integer;
+		tok.col = this->pos;
+		tok.line = this->line;
 
+		bool is_float = false;
+		char current = this->read_char();
+
+		while (isdigit(current) || current == '.') {
+			current = this->read_char();
+			if (current == '.' && !is_float) {
+				is_float = true;
+				continue;
+			}
+			if (current == '.' && is_float) break;
+		}
+
+		this->step_back(1);
+		tok.len = this->pos - tok.col;
+
+		if (is_float) {
+			tok.type = TokenTypes::floating;
+		}
+
+		return tok;
+	}
+
+	Token Lexer::tokenize_string(char to_end) {
+		Token tok;
+		tok.type = TokenTypes::string;
+		tok.line = this->line;
+		tok.col = this->pos;
+
+		char current = this->read_char();
+		while (true) {
+			char next = this->read_char();
+			if (current == 0) break;
+			if (current == '\\' && next == to_end) {
+				current = this->read_char();
+				continue;
+			}
+			this->step_back(1);
+			if (current == to_end) break;
+			current = this->read_char();
+		}
+
+		tok.len = this->pos - tok.col - 1;
+
+		return tok;
+	}
+
+	Token Lexer::parse_token() {
+		this->skip_blank();
+
+		char tok = this->read_char();
+
+		if (tok == 0) {
+			return (Token) {
+				.type = TokenTypes::eof,
+				.line = this->line,
+				.col = this->col,
+				.len = 0,
+			};
+		}
+
+		switch (tok) {
+			case '"':
+			case '\'':
+				return this->tokenize_string(tok);
+				break;
+			case ':':
+				return (Token) {
+					.type = TokenTypes::colon,
+					.line = this->line,
+					.col = this->col - 1,
+					.len = 1,
+				};
+				break;
+			case ';':
+				return (Token) {
+					.type = TokenTypes::semicolon,
+					.line = this->line,
+					.col = this->col - 1,
+					.len = 1,
+				};
+				break;
+			case ',':
+				return (Token) {
+					.type = TokenTypes::comma,
+					.line = this->line,
+					.col = this->col - 1,
+					.len = 1,
+				};
+				break;
+			case '[':
+				return (Token) {
+					.type = TokenTypes::lsquarebracket,
+					.line = this->line,
+					.col = this->col - 1,
+					.len = 1,
+				};
+				break;
+			case ']':
+				return (Token) {
+					.type = TokenTypes::rsquarebracket,
+					.line = this->line,
+					.col = this->col - 1,
+					.len = 1,
+				};
+				break;
+			case '{':
+				return (Token) {
+					.type = TokenTypes::lsquiglybracket,
+					.line = this->line,
+					.col = this->col - 1,
+					.len = 1,
+				};
+				break;
+			case '}':
+				return (Token) {
+					.type = TokenTypes::rsquiglybracket,
+					.line = this->line,
+					.col = this->col - 1,
+					.len = 1,
+				};
+				break;
+			case '-':
+				this->skip_comment();
+				return this->parse_token();
+		}
+
+		if (isalpha(tok) || tok == '_' || tok == '$') {
+			this->step_back(1);
+			return this->tokenize_identifier();
+		} else if (isdigit(tok)) {
+			this->step_back(1);
+			return this->tokenize_number();
+		} else {
+			return (Token) {
+				.type = TokenTypes::illegal,
+				.line = this->line,
+				.col = this->col,
+				.len = 0,
+			};
+		}
 	}
 }

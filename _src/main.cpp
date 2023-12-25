@@ -1,23 +1,23 @@
 #include <cstdio>
+#include <string>
 
-#include <types.hpp>
-#include <collection.hpp>
-#include <config.hpp>
+#include <zql/lexer.hpp>
 
-using ZeonDB::Conf::Config;
-using ZeonDB::Conf::parse_config;
+using ZeonDB::ZQL::Lexer;
+using ZeonDB::ZQL::Token;
+using ZeonDB::ZQL::TokenTypes;
 
 int main() {
-	Config conf = parse_config("");
-	printf("%s\n", conf.format.c_str());
-	printf("%d\n", conf.persistence.enable);
-	printf("%s\n", conf.branch.default_name.c_str());
-	printf("%s\n", conf.branch.merge_mode.c_str());
-	printf("%s\n", conf.accounts.default_name.c_str());
-	printf("%zu\n", conf.accounts.password.min_length);
-	printf("%zu\n", conf.accounts.password.max_length);
-	printf("%zu\n", conf.communication.max_connections);
-	printf("%d\n", conf.communication.ip.enable);
-	printf("%hu\n", conf.communication.ip.port);
+	std::string str = R"(set ahoj [xd nice] {ahoj {cau hmm}} -- komentar
+
+ano 74 3.14 true false)";
+	Lexer lex(str);
+
+	Token tok = lex.parse_token();
+
+	while (tok.type != TokenTypes::eof) {
+		printf("%s\n", str.substr(tok.col, tok.len).c_str());
+		tok = lex.parse_token();
+	}
 	return 0;
 }

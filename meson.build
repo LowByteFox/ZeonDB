@@ -3,7 +3,8 @@ project('ZeonDB', 'cpp',
 
 files = ['_src/main.cpp', '_src/types.cpp', '_src/collection.cpp',
          '_src/ssl.cpp', '_src/accounts.cpp', '_src/config.cpp',
-         '_src/zql/lexer.cpp']
+         '_src/zql/lexer.cpp', '_src/zql/parser.cpp', '_src/zql/ctx.cpp',
+         ]
 
 dirs = include_directories(['_src/include/'])
 

@@ -1,23 +1,32 @@
 #include <cstdio>
 #include <string>
+#include <vector>
+#include <memory>
 
-#include <zql/lexer.hpp>
+#include <collection.hpp>
+#include <types.hpp>
+#include <zql/parser.hpp>
+#include <zql/ctx.hpp>
 
-using ZeonDB::ZQL::Lexer;
-using ZeonDB::ZQL::Token;
-using ZeonDB::ZQL::TokenTypes;
+using ZeonDB::Collection;
+using ZeonDB::Types::FormatType;
+using ZeonDB::ZQL::Parser;
+using ZeonDB::ZQL::Context;
 
 int main() {
-	std::string str = R"(set ahoj [xd nice] {ahoj {cau hmm}} -- komentar
+	auto db = std::make_shared<Collection>();
 
-ano 74 3.14 true false)";
-	Lexer lex(str);
+	Parser parser(db, R"(set ahoj cau; get xd)");
 
-	Token tok = lex.parse_token();
+	std::vector<Context> parsed = parser.parse();
 
-	while (tok.type != TokenTypes::eof) {
-		printf("%s\n", str.substr(tok.col, tok.len).c_str());
-		tok = lex.parse_token();
+	for (auto& ctx : parsed) {
+		size_t arg_count = ctx.arg_count();
+		for (int i = 0; i < arg_count; i++) {
+			auto arg = ctx.get_arg(i);
+			if (arg == nullptr) continue;
+			printf("%s\n", arg->stringify(FormatType::JSON).c_str());
+		}
 	}
 	return 0;
 }

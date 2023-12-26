@@ -34,6 +34,7 @@ namespace ZeonDB::ZQL {
 			std::string get_error();
 			void add_arg(ZqlTrace);
 			std::shared_ptr<ZeonDB::Types::Value> get_arg(size_t);
+			std::string get_arg_error(size_t index);
 			size_t arg_count();
 			void set_function(ZqlFunction);
 			void execute(std::shared_ptr<ZeonDB::Types::Value>);

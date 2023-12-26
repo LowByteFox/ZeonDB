@@ -25,6 +25,10 @@ namespace ZeonDB::ZQL {
 		if (index >= this->args.size()) return nullptr;
 		return this->args[index].value;
 	}
+	std::string Context::get_arg_error(size_t index) {
+		if (index >= this->args.size()) return "";
+		return this->args[index].error;
+	}
 
 	size_t Context::arg_count() {
 		return this->args.size();

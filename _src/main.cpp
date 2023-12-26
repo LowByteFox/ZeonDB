@@ -16,7 +16,7 @@ using ZeonDB::ZQL::Context;
 int main() {
 	auto db = std::make_shared<Collection>();
 
-	Parser parser(db, R"(set ahoj cau; get xd)");
+	Parser parser(db, R"(set ahoj [ahoj nice])");
 
 	std::vector<Context> parsed = parser.parse();
 
@@ -24,6 +24,11 @@ int main() {
 		size_t arg_count = ctx.arg_count();
 		for (int i = 0; i < arg_count; i++) {
 			auto arg = ctx.get_arg(i);
+			std::string error = ctx.get_arg_error(i);
+			if (error.length() > 0) {
+				printf("Error: %s\n", error.c_str());
+				continue;
+			}
 			if (arg == nullptr) continue;
 			printf("%s\n", arg->stringify(FormatType::JSON).c_str());
 		}

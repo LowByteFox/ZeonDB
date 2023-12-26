@@ -38,7 +38,6 @@ namespace ZeonDB::ZQL {
 			case TokenTypes::lsquarebracket:
 			case TokenTypes::lsquiglybracket:
 			{
-				this->lexer.step_back(1);
 				ZqlTrace trace = this->parse_value(tok);
 				if (trace.value)
 					val = trace.value;
@@ -65,6 +64,36 @@ namespace ZeonDB::ZQL {
 			};
 		}
 
+		if (tok.type == TokenTypes::lsquarebracket) {
+			std::vector<std::shared_ptr<Value>> values;
+
+			while (true) {
+				tok = this->lexer.parse_token();
+				if (tok.type == TokenTypes::rsquarebracket) break;
+				else if (tok.type == TokenTypes::comma) continue;
+				else if (tok.type == TokenTypes::eof)
+					return (ZqlTrace) {
+						.value = nullptr,
+						.error = "Expected , or ] at " + std::to_string(tok.line) + ":" + std::to_string(tok.col)
+					};
+
+				auto val = this->parse_primitive_value(tok);
+
+				if (val.error.length() > 0) {
+					return val;
+				}
+
+				values.push_back(val.value);
+			}
+
+			auto array = Value::new_array();
+			array->v.a = values;
+			return (ZqlTrace) {
+				.value = array,
+				.error = ""
+			};
+		}
+
 		return this->parse_primitive_value(tok);
 	}
 
@@ -87,8 +116,9 @@ namespace ZeonDB::ZQL {
 			} else {
 				Context ctx(this->db);
 				// TODO: set function
-				while (tok.type != TokenTypes::eof and tok.type != TokenTypes::semicolon) {
+				while (true) {
 					tok = this->lexer.parse_token();
+					if (tok.type == TokenTypes::eof or tok.type == TokenTypes::semicolon) break;
 
 					ZqlTrace arg = this->parse_value(tok);
 					ctx.add_arg(arg);

@@ -1,7 +1,7 @@
 # ZeonDB
 Multi-model, high performance, NoSQL database in C++.
 
-<img src="./logo.png" width=128>
+<img src="./logo.png" width=256>
 
 ## Features
 - Suports multiple database models (KV, Document, Graph, SQL-like)

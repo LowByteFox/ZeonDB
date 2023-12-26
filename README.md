@@ -1,7 +1,7 @@
 # ZeonDB
 Multi-model, high performance, NoSQL database in C++.
 
-<img src="./logo.png" w=256>
+<img src="./logo.png" width=128>
 
 ## Features
 - Suports multiple database models (KV, Document, Graph, SQL-like)
@@ -10,7 +10,7 @@ Multi-model, high performance, NoSQL database in C++.
 - Cross-platform, depending only on OpenSSL/LibreSSL and libuv
 
 ## Getting Started
-```bash
+```sh
 git clone https://codeberg.org/LowByteFox/ZeonDB
 cd ZeonDB
 mkdir subprojects

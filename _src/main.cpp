@@ -16,7 +16,7 @@ using ZeonDB::ZQL::Context;
 int main() {
 	auto db = std::make_shared<Collection>();
 
-	Parser parser(db, R"(set ahoj [ahoj nice])");
+	Parser parser(db, R"(set ahoj [{ahoj: {ide to}, yes: ano}, tomu ver])");
 
 	std::vector<Context> parsed = parser.parse();
 

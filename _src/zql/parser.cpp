@@ -9,6 +9,12 @@
 
 using ZeonDB::Types::Value;
 
+extern void get(ZeonDB::ZQL::Context *ctx);
+
+std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
+	{"get", get},
+};
+
 namespace ZeonDB::ZQL {
 	ZqlTrace Parser::parse_primitive_value(Token tok) {
 		std::shared_ptr<Value> val = nullptr;
@@ -163,7 +169,14 @@ namespace ZeonDB::ZQL {
 				return ctxs;
 			} else {
 				Context ctx(this->db);
-				// TODO: set function
+				std::string fn_name = this->code.substr(tok.col, tok.len);
+				if (!commands.contains(fn_name)) {
+					Context ctx(this->db, "Unknown command at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
+					ctxs.push_back(ctx);
+					return ctxs;
+				}
+
+				ctx.set_function(commands[fn_name]);
 				while (true) {
 					tok = this->lexer.parse_token();
 					if (tok.type == TokenTypes::eof or tok.type == TokenTypes::semicolon) break;

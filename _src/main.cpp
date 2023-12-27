@@ -3,31 +3,23 @@
 #include <vector>
 #include <memory>
 
-#include <collection.hpp>
-#include <types.hpp>
-#include <zql/parser.hpp>
-#include <zql/ctx.hpp>
+#include <accounts.hpp>
+#include <db.hpp>
+#include <ssl.hpp>
 
-using ZeonDB::Collection;
-using ZeonDB::Types::FormatType;
-using ZeonDB::ZQL::Parser;
-using ZeonDB::ZQL::Context;
+#include <openssl/sha.h>
 
 int main() {
-	auto db = std::make_shared<Collection>();
+	ZeonDB::DB db;
 
-	Parser parser(db, R"(get ahoj[0])");
+	unsigned char out[SHA256_DIGEST_LENGTH];
 
-	std::vector<Context> parsed = parser.parse();
+	ZeonDB::SSL::SHA256("paris", out);
 
-	for (auto& ctx : parsed) {
-		std::string error = ctx.get_error();
-		if (error.length() > 0) {
-			fprintf(stderr, "%s\n", error.c_str());
-			continue;
-		}
+	ZeonDB::Accounts::Account acc;
+	std::memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
 
-		ctx.execute(nullptr);
-	}
+	db.register_account("theo", acc);
+
 	return 0;
 }

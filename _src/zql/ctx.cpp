@@ -13,10 +13,6 @@ namespace ZeonDB::ZQL {
 		return this->user;
 	}
 
-	std::string Context::get_error() {
-		return this->error;
-	}
-
 	void Context::add_arg(ZqlTrace trace) {
 		this->args.push_back(trace);
 	}

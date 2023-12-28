@@ -1,7 +1,6 @@
 #include <string>
 #include <memory>
 
-#include <collection.hpp>
 #include <accounts.hpp>
 #include <types.hpp>
 #include <zql/ctx.hpp>
@@ -29,10 +28,10 @@ namespace ZeonDB::ZQL {
 	}
 
 	ZeonDB::Accounts::Permission Context::get_perm(std::string key) {
-		return this->db->get_perms(this->user, key);
+		return this->db->v.c.get_perms(this->user, key);
 	}
 
-	std::shared_ptr<ZeonDB::Collection> Context::get_db() {
+	std::shared_ptr<ZeonDB::Types::Value> Context::get_db() {
 		return this->db;
 	}
 
@@ -44,9 +43,8 @@ namespace ZeonDB::ZQL {
 		this->fn = fn;
 	}
 
-	void Context::execute(std::shared_ptr<ZeonDB::Types::Value> buffer) {
-		if (buffer != nullptr) 
-			this->temporary_buffer = buffer;
+	void Context::execute(std::shared_ptr<ZeonDB::Types::Value>* buffer) {
+		this->temporary_buffer = buffer;
 
 		if (this->fn == nullptr) {
 			this->error = "Function not set!";

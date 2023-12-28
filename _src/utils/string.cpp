@@ -14,4 +14,8 @@ namespace ZeonDB::Utils {
 		this->iter_pos += delimiter.length();
 		return this->substr(current, this->iter_pos - current - delimiter.length());
 	}
+
+	bool String::peek(std::string delimiter) {
+		return this->find(delimiter, this->length() - this->iter_pos) != std::string::npos;
+	}
 }

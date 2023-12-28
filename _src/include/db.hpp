@@ -5,7 +5,7 @@
 
 #include <accounts.hpp>
 #include <config.hpp>
-#include <collection.hpp>
+#include <types.hpp>
 #include <zql/ctx.hpp>
 
 #include <openssl/sha.h>
@@ -13,7 +13,7 @@
 namespace ZeonDB {
 	class DB {
 		private:
-			std::shared_ptr<Collection> db;
+			std::shared_ptr<ZeonDB::Types::Value> db;
 			Conf::Config conf;
 			Accounts::AccountManager accs;
 			// TODO: NETWORKING

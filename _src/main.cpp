@@ -29,7 +29,7 @@ int main() {
 	db.register_account("theo", acc);
 	db.assign_perm("theo", "$", perm);
 
-	ZeonDB::ZQL::ZqlTrace trace = db.execute(R"(set ahoj cau; get ahoj)", "theo");
+	ZeonDB::ZQL::ZqlTrace trace = db.execute(R"(set ahoj.nice.yay cau; get ahoj.nice.yay)", "theo");
 
 	if (trace.error.length() > 0) {
 		fprintf(stderr, "Error: %s\n", trace.error.c_str());

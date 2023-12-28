@@ -11,6 +11,7 @@ namespace ZeonDB::Utils {
 			String(const char* s) : std::string(s), iter_pos(0) {}
 			String(std::string s) : std::string(s), iter_pos(0) {}
 
-			std::string next(std::string delimiter);
+			std::string next(std::string);
+			bool peek(std::string);
 	};
 }

@@ -1,6 +1,6 @@
 #include <db.hpp>
 #include <config.hpp>
-#include <collection.hpp>
+#include <types.hpp>
 #include <zql/parser.hpp>
 #include <zql/ctx.hpp>
 
@@ -13,7 +13,7 @@
 
 namespace ZeonDB {
 	DB::DB() {
-		this->db = std::make_shared<Collection>();
+		this->db = ZeonDB::Types::Value::new_collection();
 
 		bool check_system = true;
 		bool configured = false;
@@ -45,7 +45,7 @@ namespace ZeonDB {
 	}
 
 	void DB::assign_perm(std::string username, std::string key, Accounts::Permission perm) {
-		this->db->assign_perm(username, key, perm);
+		this->db->v.c.assign_perm(username, key, perm);
 	}
 
 	ZQL::ZqlTrace DB::execute(std::string script, std::string username) {
@@ -63,7 +63,7 @@ namespace ZeonDB {
 				};
 			}
 
-			ctx.execute(tmp_buffer);
+			ctx.execute(&tmp_buffer);
 
 			if (ctx.error.length() > 0) {
 				return (ZQL::ZqlTrace) {

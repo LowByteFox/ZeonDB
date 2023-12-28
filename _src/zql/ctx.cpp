@@ -1,6 +1,8 @@
 #include <string>
 #include <memory>
 
+#include <collection.hpp>
+#include <accounts.hpp>
 #include <types.hpp>
 #include <zql/ctx.hpp>
 
@@ -24,6 +26,14 @@ namespace ZeonDB::ZQL {
 	std::string Context::get_arg_error(size_t index) {
 		if (index >= this->args.size()) return "";
 		return this->args[index].error;
+	}
+
+	ZeonDB::Accounts::Permission Context::get_perm(std::string key) {
+		return this->db->get_perms(this->user, key);
+	}
+
+	std::shared_ptr<ZeonDB::Collection> Context::get_db() {
+		return this->db;
 	}
 
 	size_t Context::arg_count() {

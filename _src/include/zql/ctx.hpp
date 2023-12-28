@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <types.hpp>
+#include <accounts.hpp>
 #include <collection.hpp>
 
 namespace ZeonDB::ZQL {
@@ -33,6 +34,8 @@ namespace ZeonDB::ZQL {
 			void set_user(std::string);
 			std::string get_user();
 			void add_arg(ZqlTrace);
+			ZeonDB::Accounts::Permission get_perm(std::string);
+			std::shared_ptr<ZeonDB::Collection> get_db();
 			std::shared_ptr<ZeonDB::Types::Value> get_arg(size_t);
 			std::string get_arg_error(size_t index);
 			size_t arg_count();

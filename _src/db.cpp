@@ -44,6 +44,10 @@ namespace ZeonDB {
 		return this->accs.login(username, encrypted_password);
 	}
 
+	void DB::assign_perm(std::string username, std::string key, Accounts::Permission perm) {
+		this->db->assign_perm(username, key, perm);
+	}
+
 	ZQL::ZqlTrace DB::execute(std::string script, std::string username) {
 		ZQL::Parser parser(this->db, script);
 		std::vector<ZQL::Context> ctxs = parser.parse();

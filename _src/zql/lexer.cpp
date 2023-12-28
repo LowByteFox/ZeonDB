@@ -54,10 +54,11 @@ namespace ZeonDB::ZQL {
 		tok.type = TokenTypes::identifier;
 		tok.col = this->pos;
         tok.line = this->line;
-
 		char current = this->read_char();
 
-		while (isdigit(current) || isalpha(current) || current == '_' || current == '$' || current == '.' || current == '@') {
+		while (isdigit(current) || isalpha(current) || isdigit(current) ||
+				current == '_' || current == '$' || current == '.' ||
+				current == '@' || current == '[' || current == ']') {
 			current = this->read_char();
 		}
 

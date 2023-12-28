@@ -16,11 +16,12 @@ namespace ZeonDB {
 			std::shared_ptr<Collection> db;
 			Conf::Config conf;
 			Accounts::AccountManager accs;
-			ZQL::ZqlTrace execute(std::string, std::string);
 			// TODO: NETWORKING
 		public:
 			DB();
 			void register_account(std::string, Accounts::Account);
 			bool login(std::string, unsigned char[SHA256_DIGEST_LENGTH]);
+			void assign_perm(std::string, std::string, Accounts::Permission);
+			ZQL::ZqlTrace execute(std::string, std::string);
 	};
 }

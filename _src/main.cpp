@@ -10,6 +10,10 @@
 
 #include <openssl/sha.h>
 
+#ifndef __ORDER_LITTLE_ENDIAN__
+#error "__ORDER_LITTLE_ENDIAN__ must be defined, use different compiler!"
+#endif
+
 int main() {
 	ZeonDB::DB db;
 

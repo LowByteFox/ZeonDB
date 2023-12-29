@@ -33,15 +33,6 @@ int main() {
 	db.register_account("theo", acc);
 	db.assign_perm("theo", "$", perm);
 
-	ZeonDB::ZQL::ZqlTrace trace = db.execute(R"(set ahoj.nice.yay cau; get ahoj.nice.yay)", "theo");
-
-	if (trace.error.length() > 0) {
-		fprintf(stderr, "Error: %s\n", trace.error.c_str());
-	} else if (trace.value != nullptr) {
-		printf("Value: %s\n", trace.value->stringify(ZeonDB::Types::FormatType::JSON).c_str());
-	} else {
-		printf("Got null!\n");
-	}
-
+	db.run();
 	return 0;
 }

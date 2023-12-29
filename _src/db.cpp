@@ -3,6 +3,7 @@
 #include <types.hpp>
 #include <zql/parser.hpp>
 #include <zql/ctx.hpp>
+#include <net/server.hpp>
 
 #include <memory>
 #include <string>
@@ -33,7 +34,7 @@ namespace ZeonDB {
 			this->conf = Conf::parse_config("");
 		}
 
-		// TODO: NETWORK PORT
+		this->server.configure(this->conf.communication.ip.port);
 	}
 
 	void DB::register_account(std::string username, Accounts::Account acc) {
@@ -46,6 +47,10 @@ namespace ZeonDB {
 
 	void DB::assign_perm(std::string username, std::string key, Accounts::Permission perm) {
 		this->db->v.c.assign_perm(username, key, perm);
+	}
+
+	void DB::run() {
+		this->server.serve(this);
 	}
 
 	ZQL::ZqlTrace DB::execute(std::string script, std::string username) {

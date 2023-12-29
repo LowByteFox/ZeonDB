@@ -59,6 +59,7 @@ namespace ZeonDB {
 
 		std::shared_ptr<ZeonDB::Types::Value> tmp_buffer;
 
+
 		for (auto& ctx : ctxs) {
 			ctx.set_user(username);
 			if (ctx.error.length() > 0) {

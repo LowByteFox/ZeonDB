@@ -16,6 +16,6 @@ namespace ZeonDB::Utils {
 	}
 
 	bool String::peek(std::string delimiter) {
-		return this->find(delimiter, this->length() - this->iter_pos) != std::string::npos;
+		return this->find(delimiter, this->iter_pos - delimiter.size()) != std::string::npos;
 	}
 }

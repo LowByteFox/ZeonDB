@@ -35,6 +35,7 @@ void get_casual(ZeonDB::ZQL::Context* ctx) {
 			}
 
 			auto val = current->v.c.get(s);
+
 			if (val == nullptr) {
 				ctx->error = "No such key \"" + key->v.s + "\"!";
 				return;

@@ -28,7 +28,7 @@ int main() {
 		.can_manage = true,
 	};
 
-	std::memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
+	memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
 
 	db.register_account("theo", acc);
 	db.assign_perm("theo", "$", perm);

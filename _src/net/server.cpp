@@ -7,10 +7,13 @@
 #include <net/server.hpp>
 #include <net/frame.hpp>
 #include <net/client.hpp>
+#include <types.hpp>
+#include <zql/ctx.hpp>
 
 #include <openssl/sha.h>
 
 using ZeonDB::Net::ZeonFrameStatus;
+using ZeonDB::Types::FormatType;
 
 void alloc_buff(uv_handle_t*, size_t, uv_buf_t*);
 void get_frame(uv_stream_t *, ssize_t, const uv_buf_t*);
@@ -51,19 +54,17 @@ void close_client(uv_handle_t *handle) {
 	delete client;
 }
 
-void handle_frame(ZeonDB::Net::Client *client) {
+void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 	auto* frame = client->get_frame();
 
+	client->read = 0;
 	switch (frame->get_status()) {
-		case ZeonFrameStatus::Ok:
-			break;
 		case ZeonFrameStatus::Auth:
 			{
 				auto msg = frame->read_buffer();
 				size_t index = std::distance(msg.data(), std::find(msg.data(), msg.data() + 1015, ' '));
 				std::string username;
-				username.reserve(index);
-				memcpy(username.data(), msg.data(), index);
+				username.append(msg.data(), index);
 				index += 1;
 				std::array<unsigned char, SHA256_DIGEST_LENGTH> password;
 				memcpy(password.data(), msg.data() + index, SHA256_DIGEST_LENGTH);
@@ -84,6 +85,38 @@ void handle_frame(ZeonDB::Net::Client *client) {
 				}
 			}
 			break;
+		case ZeonFrameStatus::Command:
+			{
+				auto msg = frame->read_buffer();
+
+				client->buffer = "";
+
+				client->buffer.append(msg.data(), frame->get_length());
+
+				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer, client->get_user());
+
+				if (trace.error.length() > 0) {
+					memcpy(msg.data(), trace.error.data(), trace.error.length());
+					frame->to_buffer(ZeonFrameStatus::Error, trace.error.length());
+					frame->write_buffer(msg);
+
+					client->send_message();
+				} else if (trace.value != nullptr) {
+					std::string res = trace.value->stringify(FormatType::JSON);
+					memcpy(msg.data(), res.data(), res.length());
+					frame->to_buffer(ZeonFrameStatus::Command, res.length());
+					frame->write_buffer(msg);
+
+					client->send_message();
+				} else {
+					frame->to_buffer(ZeonFrameStatus::Ok, 0);
+
+					client->send_message();
+				}
+				break;
+			}
+		default:
+			break;
 	}
 }
 
@@ -98,11 +131,11 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 
 	if (nread > 0) {
 		client->read += nread;
+		auto frame = client->get_frame();
 
 		if (client->read == 1024) {
-			auto frame = client->get_frame();
 			frame->from_buffer();
-			handle_frame(client);
+			handle_frame(client, handle);
 		}
 	} else if (nread == 0) {
 	} else {

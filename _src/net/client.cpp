@@ -24,6 +24,10 @@ namespace ZeonDB::Net {
 		this->user = login;
 	}
 
+	std::string Client::get_user() {
+		return this->user;
+	}
+
 	uv_tcp_t *Client::get_client() {
 		return &this->client;
 	}

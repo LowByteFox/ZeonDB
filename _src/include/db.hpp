@@ -11,6 +11,10 @@
 
 #include <openssl/sha.h>
 
+namespace ZeonDB::Net {
+	class Server;
+}
+
 namespace ZeonDB {
 	class DB {
 		private:

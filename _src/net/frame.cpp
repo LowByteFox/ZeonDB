@@ -2,6 +2,7 @@
 #include <cstring>
 #include <bit>
 #include <array>
+#include <charconv>
 
 #include <net/frame.hpp>
 
@@ -22,12 +23,12 @@ namespace ZeonDB::Net {
 	}
 
 	void ZeonFrame::from_buffer() {
-		memcpy(this->buffer.data(), &this->status, sizeof(ZeonFrameStatus));
+		memcpy(&this->status, this->buffer.data(), sizeof(ZeonFrameStatus));
 		switch (this->status) {
 			case ZeonFrameStatus::Command:
 			case ZeonFrameStatus::Error:
 			case ZeonFrameStatus::Auth:
-				memcpy(this->buffer.data() + sizeof(ZeonFrameStatus), &this->target_length, sizeof(uint64_t));
+				memcpy(&this->target_length, this->buffer.data() + sizeof(ZeonFrameStatus), sizeof(uint64_t));
 				break;
 			default:
 				break;

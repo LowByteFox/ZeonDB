@@ -60,6 +60,10 @@ pub fn main() !void {
             var command = try getline(allocator);
             defer allocator.free(command);
 
+            if (command.len >= 4 and std.mem.eql(u8, command[0..4], "exit")) {
+                break;
+            }
+
             if (command.len > 1015) {
                 const leftover = (command.len - 1015) % 1024;
                 const tofill = 1024 - leftover;

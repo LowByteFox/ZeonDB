@@ -25,11 +25,13 @@ pub const AccountManager = struct {
     }
 
     pub fn register(self: *AccountManager, username: []const u8, account: Account) !void {
+        std.log.debug("({s}:{}) Account \"{s}\" was registered", .{@src().fn_name, @src().line, username});
         try self.accounts.put(username, account);
     }
 
     pub fn login(self: *AccountManager, username: []const u8, encrypted_password: []const u8) bool {
          const acc = self.accounts.getPtr(username);
+        std.log.debug("({s}:{}) Account \"{s}\" tries to login", .{@src().fn_name, @src().line, username});
          if (acc) |l| {
             if (encrypted_password.len != 32) return false;
             return std.mem.eql(u8, l.password[0..], encrypted_password);

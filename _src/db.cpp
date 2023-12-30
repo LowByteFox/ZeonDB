@@ -1,4 +1,5 @@
 #include <db.hpp>
+#include <logger.hpp>
 #include <config.hpp>
 #include <types.hpp>
 #include <zql/parser.hpp>
@@ -14,6 +15,7 @@
 
 namespace ZeonDB {
 	DB::DB() {
+		LOG_I("ZeonDB is starting...", nullptr);
 		this->db = ZeonDB::Types::Value::new_collection();
 
 		bool check_system = true;
@@ -50,6 +52,7 @@ namespace ZeonDB {
 	}
 
 	void DB::run() {
+		LOG_I("ZeonDB ready!", nullptr);
 		this->server.serve(this);
 	}
 

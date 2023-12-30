@@ -6,6 +6,8 @@
 #include <ctime>
 #include <iomanip>
 
+#define SPACING 125
+
 namespace ZeonDB {
 	std::string get_time() {
 		std::time_t currentTime = std::time(nullptr);
@@ -30,17 +32,19 @@ namespace ZeonDB {
 		va_list args;
 
 		va_start(args, format);
-
-		fprintf(this->file, "%s (%s:%lu) \e[47;1m\e[30;1m V \e[0m ",
+		int printed = fprintf(this->file, "%s (%s:%lu)",
 				get_time().c_str(), fn, line);
+		fprintf(this->file, "%*c", SPACING - printed, ' ');
+		fprintf(this->file, " \e[47;1m\e[30;1m V \e[0m ");
 		vfprintf(this->file, format, args);
 		fprintf(this->file, "\n");
 		fflush(this->file);
 		va_end(args);
 
 		va_start(args, format);
-		printf("%s (%s:%lu) \e[30;1m\e[47;1m V \e[0m ",
-				get_time().c_str(), fn, line);
+		printed = printf("%s (%s:%lu)", get_time().c_str(), fn, line);
+		printf("%*c", SPACING - printed, ' ');
+		printf(" \e[47;1m\e[30;1m V \e[0m ");
 		vprintf(format, args);
 		printf("\n");
 		va_end(args);
@@ -50,17 +54,19 @@ namespace ZeonDB {
 		va_list args;
 
 		va_start(args, format);
-
-		fprintf(this->file, "%s (%s:%lu) \e[42;1m\e[37;1m V \e[0m ",
+		int printed = fprintf(this->file, "%s (%s:%lu)",
 				get_time().c_str(), fn, line);
+		fprintf(this->file, "%*c", SPACING - printed, ' ');
+		fprintf(this->file, " \e[42;1m\e[37;1m D \e[0m ");
 		vfprintf(this->file, format, args);
 		fprintf(this->file, "\n");
 		fflush(this->file);
 		va_end(args);
 
 		va_start(args, format);
-		printf("%s (%s:%lu) \e[37;1m\e[42;1m V \e[0m ",
-				get_time().c_str(), fn, line);
+		printed = printf("%s (%s:%lu)", get_time().c_str(), fn, line);
+		printf("%*c", SPACING - printed, ' ');
+		printf(" \e[42;1m\e[37;1m D \e[0m ");
 		vprintf(format, args);
 		printf("\n");
 		va_end(args);
@@ -70,17 +76,19 @@ namespace ZeonDB {
 		va_list args;
 
 		va_start(args, format);
-
-		fprintf(this->file, "%s (%s:%lu) \e[46;1m\e[37;1m V \e[0m ",
+		int printed = fprintf(this->file, "%s (%s:%lu)",
 				get_time().c_str(), fn, line);
+		fprintf(this->file, "%*c", SPACING - printed, ' ');
+		fprintf(this->file, " \e[46;1m\e[37;1m I \e[0m ");
 		vfprintf(this->file, format, args);
 		fprintf(this->file, "\n");
 		fflush(this->file);
 		va_end(args);
 
 		va_start(args, format);
-		printf("%s (%s:%lu) \e[37;1m\e[46;1m V \e[0m ",
-				get_time().c_str(), fn, line);
+		printed = printf("%s (%s:%lu)", get_time().c_str(), fn, line);
+		printf("%*c", SPACING - printed, ' ');
+		printf(" \e[46;1m\e[37;1m I \e[0m ");
 		vprintf(format, args);
 		printf("\n");
 		va_end(args);
@@ -90,17 +98,19 @@ namespace ZeonDB {
 		va_list args;
 
 		va_start(args, format);
-
-		fprintf(this->file, "%s (%s:%lu) \e[43;1m\e[30;1m V \e[0m\e[33;1m ",
+		int printed = fprintf(this->file, "%s (%s:%lu)",
 				get_time().c_str(), fn, line);
+		fprintf(this->file, "%*c", SPACING - printed, ' ');
+		fprintf(this->file, " \e[43;1m\e[30;1m W \e[0m\e[33;1m ");
 		vfprintf(this->file, format, args);
 		fprintf(this->file, "\e[0m\n");
 		fflush(this->file);
 		va_end(args);
 
 		va_start(args, format);
-		printf("%s (%s:%lu) \e[30;1m\e[43;1m V \e[0m\e[33;1m ",
-				get_time().c_str(), fn, line);
+		printed = printf("%s (%s:%lu)", get_time().c_str(), fn, line);
+		printf("%*c", SPACING - printed, ' ');
+		printf(" \e[43;1m\e[30;1m W \e[0m\e[33;1m ");
 		vprintf(format, args);
 		printf("\e[0m\n");
 		va_end(args);
@@ -110,17 +120,19 @@ namespace ZeonDB {
 		va_list args;
 
 		va_start(args, format);
-
-		fprintf(this->file, "%s (%s:%lu) \e[41;1m\e[30m V \e[0m\e[31;1m ",
+		int printed = fprintf(this->file, "%s (%s:%lu)",
 				get_time().c_str(), fn, line);
+		fprintf(this->file, "%*c", SPACING - printed, ' ');
+		fprintf(this->file, " \e[41;1m\e[30m E \e[0m\e[31;1m ");
 		vfprintf(this->file, format, args);
 		fprintf(this->file, "\e[0m\n");
 		fflush(this->file);
 		va_end(args);
 
 		va_start(args, format);
-		printf("%s (%s:%lu) \e[30;1m\e[41;1m V \e[0m\e[31;1m ",
-				get_time().c_str(), fn, line);
+		printed = printf("%s (%s:%lu)", get_time().c_str(), fn, line);
+		printf("%*c", SPACING - printed, ' ');
+		printf(" \e[41;1m\e[30m E \e[0m\e[31;1m ");
 		vprintf(format, args);
 		printf("\e[0m\n");
 		va_end(args);

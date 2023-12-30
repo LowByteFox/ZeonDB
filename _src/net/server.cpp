@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdio>
 
+#include <logger.hpp>
 #include <db.hpp>
 #include <uv.h>
 #include <net/server.hpp>
@@ -26,6 +27,23 @@ void on_connect(uv_stream_t *server, int status) {
 	uv_tcp_init(s->get_loop(), cl->get_client());
 
 	if (uv_accept(server, (uv_stream_t*) cl->get_client()) == 0) {
+        struct sockaddr_storage addr;
+        int len = sizeof(addr);
+        char ip[INET6_ADDRSTRLEN];
+        int port;
+
+        uv_tcp_getpeername(cl->get_client(), (struct sockaddr*)&addr, &len);
+
+        if (addr.ss_family == AF_INET) {
+            uv_ip4_name((struct sockaddr_in*)&addr, ip, sizeof(ip));
+            port = ntohs(((struct sockaddr_in*)&addr)->sin_port);
+        } else { 
+            uv_ip6_name((struct sockaddr_in6*)&addr, ip, sizeof(ip));
+            port = ntohs(((struct sockaddr_in6*)&addr)->sin6_port);
+        }
+
+		LOG_I("New client! %s:%d", ip, port);
+
 		cl->get_client()->data = cl;
 		auto frame = cl->get_frame();
 		frame->to_buffer(ZeonFrameStatus::Ok, 0);
@@ -61,6 +79,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 	switch (frame->get_status()) {
 		case ZeonFrameStatus::Auth:
 			{
+				LOG_V("Recieved AUTH", nullptr);
 				auto msg = frame->read_buffer();
 				size_t index = std::distance(msg.data(), std::find(msg.data(), msg.data() + 1015, ' '));
 				std::string username;
@@ -70,6 +89,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 				memcpy(password.data(), msg.data() + index, SHA256_DIGEST_LENGTH);
 
 				if (client->get_server()->get_db()->login(username.data(), password.data())) {
+					LOG_I("User \"%s\" logged in", username.c_str());
 					client->set_user(username);
 
 					memcpy(msg.data(), "OK", 2);
@@ -77,6 +97,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 					frame->write_buffer(msg);
 					client->send_message();
 				} else {
+					LOG_W("Wrong login!", nullptr);
 					std::string err = "ER Bad username or password";
 					memcpy(msg.data(), err.data(), err.size());
 					frame->to_buffer(ZeonFrameStatus::Auth, err.size());
@@ -87,21 +108,25 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 			break;
 		case ZeonFrameStatus::Command:
 			{
+				LOG_V("Recieved COMMAND", nullptr);
 				auto msg = frame->read_buffer();
 
 				client->buffer = "";
 
 				client->buffer.append(msg.data(), frame->get_length());
 
+				LOG_V("Executing!", nullptr);
 				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer, client->get_user());
 
 				if (trace.error.length() > 0) {
+					LOG_V("Execution ended with an Error!", nullptr);
 					memcpy(msg.data(), trace.error.data(), trace.error.length());
 					frame->to_buffer(ZeonFrameStatus::Error, trace.error.length());
 					frame->write_buffer(msg);
 
 					client->send_message();
 				} else if (trace.value != nullptr) {
+					LOG_V("Execution ended with a Value!", nullptr);
 					std::string res = trace.value->stringify(FormatType::JSON);
 					memcpy(msg.data(), res.data(), res.length());
 					frame->to_buffer(ZeonFrameStatus::Command, res.length());
@@ -109,6 +134,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 
 					client->send_message();
 				} else {
+					LOG_V("Execution ended", nullptr);
 					frame->to_buffer(ZeonFrameStatus::Ok, 0);
 
 					client->send_message();
@@ -124,6 +150,7 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	auto* client = static_cast<ZeonDB::Net::Client*>(handle->data);
 
 	if (nread == UV_EOF) {
+		LOG_I("Client disconnected!", nullptr);
 		uv_read_stop(handle);
 		uv_close((uv_handle_t*)client->get_client(), close_client);
 		return;
@@ -134,18 +161,20 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 		auto frame = client->get_frame();
 
 		if (client->read == 1024) {
+			LOG_V("Received a frame!", nullptr);
 			frame->from_buffer();
 			handle_frame(client, handle);
 		}
 	} else if (nread == 0) {
 	} else {
-		printf("%s\n", uv_strerror(nread));
+		LOG_E("%s", uv_strerror(nread));
 		uv_stop(client->get_server()->get_loop());
 	}
 }
 
 namespace ZeonDB::Net {
 	void Server::configure(uint16_t port) {
+		LOG_I("Configuring the server!", nullptr);
 		uv_ip4_addr("0.0.0.0", port, &this->addr);
 
 
@@ -171,13 +200,14 @@ namespace ZeonDB::Net {
 		int res = uv_listen((uv_stream_t*)&server, 128, on_connect);
 
 		if (res > 0) {
-			fprintf(stderr, "Listen error: %s\n", uv_strerror(res));
+			LOG_E("Listen error: %s\n", uv_strerror(res));
 			return;
 		}
 
 		server.data = this;
 
-		printf("Running on port %d\n", this->port);
+		LOG_I("Running on port %d", this->port);
 		uv_run(this->loop, UV_RUN_DEFAULT);
+		LOG_I("Stopping server!", nullptr);
 	}
 }

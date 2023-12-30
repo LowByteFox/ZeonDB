@@ -22,10 +22,10 @@ namespace ZeonDB {
 	};
 }
 
-#define LOG_V(format, args...) LOG.verbose(__FUNCTION__, __LINE__, format, args)
-#define LOG_D(format, args...) LOG.debug(__FUNCTION__, __LINE__, format, args)
-#define LOG_I(format, args...) LOG.info(__FUNCTION__, __LINE__, format, args)
-#define LOG_W(format, args...) LOG.warn(__FUNCTION__, __LINE__, format, args)
-#define LOG_E(format, args...) LOG.error(__FUNCTION__, __LINE__, format, args)
+#define LOG_V(format, ...) LOG.verbose(__PRETTY_FUNCTION__, __LINE__, format, __VA_ARGS__)
+#define LOG_D(format, ...) LOG.debug(__PRETTY_FUNCTION__, __LINE__, format, __VA_ARGS__)
+#define LOG_I(format, ...) LOG.info(__PRETTY_FUNCTION__, __LINE__, format, __VA_ARGS__)
+#define LOG_W(format, ...) LOG.warn(__PRETTY_FUNCTION__, __LINE__, format, __VA_ARGS__)
+#define LOG_E(format, ...) LOG.error(__PRETTY_FUNCTION__, __LINE__, format, __VA_ARGS__)
 
 extern ZeonDB::Logger LOG;

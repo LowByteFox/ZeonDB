@@ -37,5 +37,6 @@ int main() {
 	db.assign_perm("theo", "$", perm);
 
 	db.run();
+	LOG_I("ZeonDB end!", nullptr);
 	return 0;
 }

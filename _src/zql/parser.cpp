@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 
+#include <logger.hpp>
 #include <types.hpp>
 #include <collection.hpp>
 #include <zql/ctx.hpp>
@@ -76,6 +77,7 @@ namespace ZeonDB::ZQL {
 		}
 
 		if (tok.type == TokenTypes::lsquarebracket) {
+			LOG_D("Parsing array", nullptr);
 			std::vector<std::shared_ptr<Value>> values;
 
 			while (true) {
@@ -104,6 +106,7 @@ namespace ZeonDB::ZQL {
 				.error = ""
 			};
 		} else if (tok.type == TokenTypes::lsquiglybracket) {
+			LOG_D("Parsing collection", nullptr);
 			Collection object;
 
 			bool key_parsed = false;
@@ -172,6 +175,7 @@ namespace ZeonDB::ZQL {
 				ctxs.push_back(ctx);
 				return ctxs;
 			} else {
+				LOG_D("Recieved token %s", this->code.substr(tok.col, tok.len).c_str());
 				Context ctx(this->db);
 				std::string fn_name = this->code.substr(tok.col, tok.len);
 				if (!commands.contains(fn_name)) {
@@ -185,13 +189,16 @@ namespace ZeonDB::ZQL {
 					tok = this->lexer.parse_token();
 					if (tok.type == TokenTypes::eof or tok.type == TokenTypes::semicolon) break;
 
+					LOG_D("Parsing token %s", this->code.substr(tok.col, tok.len).c_str());
 					ZqlTrace arg = this->parse_value(tok);
 					ctx.add_arg(arg);
 					if (arg.error.length() > 0) {
+						LOG_D("Context recieved an error!", nullptr);
 						break;
 					}
 				}
 
+				LOG_D("Context parsed successfully!", nullptr);
 				ctxs.push_back(ctx);
 			}
 			tok = this->lexer.parse_token();

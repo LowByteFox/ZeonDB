@@ -1,5 +1,6 @@
 #include <string>
 
+#include <logger.hpp>
 #include <config.hpp>
 #include <toml++/toml.h>
 
@@ -26,9 +27,11 @@ enable = true
 port = 6748)";
 
 	Config parse_config(std::string filename) {
+		LOG_I("Loading config", nullptr);
 		toml::table table;
 
 		if (filename.length() == 0) {
+			LOG_W("No config file provided, using default config", nullptr);
 			table = toml::parse(default_config);
 		} else {
 			table = toml::parse_file(filename);

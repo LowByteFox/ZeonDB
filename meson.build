@@ -5,7 +5,7 @@ files = ['_src/main.cpp', '_src/types.cpp', '_src/collection.cpp',
          '_src/ssl.cpp', '_src/accounts.cpp', '_src/config.cpp',
          '_src/zql/lexer.cpp', '_src/zql/parser.cpp', '_src/zql/ctx.cpp',
          '_src/db.cpp', '_src/utils/string.cpp', '_src/net/frame.cpp',
-         '_src/net/client.cpp', '_src/net/server.cpp',
+         '_src/net/client.cpp', '_src/net/server.cpp', '_src/logger.cpp',
          '_src/zql/commands/get.cpp', '_src/zql/commands/set.cpp',
          '_src/zql/commands/auth.cpp'
          ]

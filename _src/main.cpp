@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 
+#include <logger.hpp>
 #include <accounts.hpp>
 #include <db.hpp>
 #include <ssl.hpp>
@@ -13,6 +14,8 @@
 #ifndef __ORDER_LITTLE_ENDIAN__
 #error "__ORDER_LITTLE_ENDIAN__ must be defined, use different compiler!"
 #endif
+
+ZeonDB::Logger LOG("log");
 
 int main() {
 	ZeonDB::DB db;

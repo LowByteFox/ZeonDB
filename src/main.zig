@@ -6,7 +6,7 @@ const logger = @import("logger.zig");
 pub const std_options = logger.options;
 
 pub fn main() !void {
-    std.debug.print("\r\x1B[K", .{});
+    std.debug.print("\x1B[K", .{});
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 

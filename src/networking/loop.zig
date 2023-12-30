@@ -198,6 +198,7 @@ fn get_frame(stream: [*c]uv.uv_stream_t, nread: isize, buf: [*c]const uv.uv_buf_
                 data.command_written += 1024;
                 return;
             }
+
             @memcpy(&data.frame.fixed_buffer, data.buffer[0..1024]);
             data.frame.from_buffer();
             handle_frame(data);

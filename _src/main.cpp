@@ -28,7 +28,7 @@ int main() {
 	ZeonDB::Accounts::Permission perm = {
 		.can_write = true,
 		.can_read = true,
-		.can_manage = false,
+		.can_manage = true,
 	};
 
 	memcpy(acc.password, out, SHA256_DIGEST_LENGTH);

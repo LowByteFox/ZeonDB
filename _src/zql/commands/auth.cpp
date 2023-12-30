@@ -37,6 +37,37 @@ void get_perms(ZeonDB::ZQL::Context* ctx) {
 		*ctx->temporary_buffer = perm_to_val(perms);
 		return;
 	}
+
+	auto current = ctx->get_db();
+	std::string s = "";
+	while ((s = key->v.s.next(".")).length() > 0) {
+		if (!key->v.s.peek(".")) {
+			if (current->v.c.has_perms(user, s)) {
+				perms = current->v.c.get_perms(user, s);
+			}
+
+			*ctx->temporary_buffer = perm_to_val(perms);
+			break;
+		}
+
+		auto val = current->v.c.get(s);
+		if (val != nullptr) {
+			if (current->v.c.has_perms(user, s)) {
+				perms = current->v.c.get_perms(user, s);
+			}
+
+			if (val->t != Type::Collection) {
+				ctx->error = "Collection expected at key " + s;
+				return;
+			}
+
+			current = val;
+			continue;
+		}
+
+		ctx->error = "No such key \"" + key->v.s + "\"!";
+		break;
+	}
 }
 
 void auth(ZeonDB::ZQL::Context* ctx) {

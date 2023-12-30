@@ -163,6 +163,7 @@ namespace ZeonDB::ZQL {
 
 		Token tok = this->lexer.parse_token();
 
+		LOG_D("Got token %s %d", this->code.substr(tok.col, tok.len).c_str(), tok.type);
 		if (tok.type != TokenTypes::identifier) {
 			Context ctx(this->db, "Expected identifier at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
 			ctxs.push_back(ctx);
@@ -175,7 +176,6 @@ namespace ZeonDB::ZQL {
 				ctxs.push_back(ctx);
 				return ctxs;
 			} else {
-				LOG_D("Recieved token %s", this->code.substr(tok.col, tok.len).c_str());
 				Context ctx(this->db);
 				std::string fn_name = this->code.substr(tok.col, tok.len);
 				if (!commands.contains(fn_name)) {

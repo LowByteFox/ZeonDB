@@ -112,8 +112,9 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 				auto msg = frame->read_buffer();
 
 				client->buffer = "";
-
 				client->buffer.append(msg.data(), frame->get_length());
+
+				LOG_D("Command: %s", client->buffer.c_str());
 
 				LOG_V("Executing!", nullptr);
 				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer, client->get_user());
@@ -135,10 +136,14 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 					client->send_message();
 				} else {
 					LOG_V("Execution ended", nullptr);
-					frame->to_buffer(ZeonFrameStatus::Ok, 0);
+					memcpy(msg.data(), "OK", 2);
+					frame->to_buffer(ZeonFrameStatus::Command, 2);
+					frame->write_buffer(msg);
 
 					client->send_message();
 				}
+
+				client->buffer = "";
 				break;
 			}
 		default:

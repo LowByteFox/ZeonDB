@@ -52,10 +52,6 @@ std::optional<Permission> val_to_perm(const std::shared_ptr<Value>& val) {
 
 void get_perms(ZeonDB::ZQL::Context* ctx) {
 	auto key = ctx->get_arg(1);
-	if (ctx->get_arg(0)->v.s.compare("get") != 0 ) {
-		ctx->error = HELP_MSG;
-		return;
-	}
 
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
@@ -176,13 +172,13 @@ void create_user(ZeonDB::ZQL::Context* ctx) {
 	auto perms = ctx->get_perm("$");
 
 	if (!perms.can_manage) {
-		LOG_W("User \"%s\" tried to set permissions!", user.c_str());
+		LOG_W("User \"%s\" tried to create user!", user.c_str());
 		ctx->error = "Permissions denied, cannot manage!";
 		return;
 	}
 
 	if (!perm.has_value()) {
-		LOG_W("User \"%s\" tried to set permissions, but are incorrect!", user.c_str());
+		LOG_W("User \"%s\" tried to provide permissions, but are incorrect!", user.c_str());
 		ctx->error = "Permission are not complete!";
 		return;
 	}
@@ -203,12 +199,49 @@ void create_user(ZeonDB::ZQL::Context* ctx) {
 	ctx->get_db()->v.c.assign_perm(target_user->v.s, "$", perm_val);
 }
 
+void manage_user(ZeonDB::ZQL::Context *ctx, bool promote) {
+	std::string user = ctx->get_user();
+	auto perms = ctx->get_perm("$");
+
+	if (!perms.can_manage) {
+		LOG_W("User \"%s\" tried to manage user!", user.c_str());
+		ctx->error = "Permissions denied, cannot manage!";
+		return;
+	}
+
+	auto target_user = ctx->get_arg(1);
+
+	if (target_user->v.s.compare(user) == 0) {
+		ctx->error = "You cannot ";
+		if (promote) ctx->error += "promote yourself!";
+		else ctx->error += "demote yourself!";
+		return;
+	}
+
+	auto db = ctx->get_db();
+
+	auto perm = db->v.c.get_perms(target_user->v.s, "$");
+	perm.can_manage = promote;
+	db->v.c.assign_perm(target_user->v.s, "$", perm);
+}
+
 void auth(ZeonDB::ZQL::Context* ctx) {
 	size_t arg_count = ctx->arg_count();
 	switch (arg_count) {
 		case 2:
-			get_perms(ctx);
+		{
+			auto subcmd = ctx->get_arg(0);
+			if (subcmd->v.s.compare("get") == 0) {
+				get_perms(ctx);
+			} else if (subcmd->v.s.compare("promote") == 0) {
+				manage_user(ctx, true);
+			} else if (subcmd->v.s.compare("demote") == 0) {
+				manage_user(ctx, false);
+			} else {
+				ctx->error = HELP_MSG;
+			}
 			break;
+		}
 		case 3:
 			set_perms(ctx);
 			break;

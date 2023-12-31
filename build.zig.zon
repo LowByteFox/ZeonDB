@@ -1,0 +1,11 @@
+.{
+    .name = "ZeonDB",
+    .version = "0.1.0",
+    .paths = .{"libs"},
+    .dependencies = .{
+        .zigtoml = .{
+            .url = "https://github.com/sam701/zig-toml/archive/6d19db1ba22ef0714d697f487f78f64ec5b1fe2b.tar.gz",
+            .hash = "12204a4bda9741739bdf3794b054bc475df4dc11f6a5a48dc30abbf35a0450926b7f"
+        },
+    },
+}

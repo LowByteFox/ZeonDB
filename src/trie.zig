@@ -13,35 +13,10 @@ pub fn Trie(comptime T: type) type {
             return trie;
         }
 
-        fn clean_value(self: *@This(), arg: *types.Value, allocator: std.mem.Allocator) void {
-            switch (arg.*) {
-                types.Value.String => {
-                    allocator.free(arg.String);
-                },
-                types.Value.Array => {
-                    self.clean_array(&arg.Array, allocator);
-                    arg.Array.deinit();
-                },
-                types.Value.Collection => {
-                    arg.Collection.deinit(allocator);
-                },
-                else => {}
-            }
-            allocator.destroy(arg);
-        }
-
-        fn clean_array(self: *@This(), arr: *std.ArrayList(*types.Value), allocator: std.mem.Allocator) void {
-            for (arr.items) |i| {
-                var item = @constCast(i);
-                self.clean_value(item, allocator);
-            }
-        }
-
         pub fn deinit(self: *Trie(T), allocator: std.mem.Allocator) void {
             if (T == *types.Value) {
-                if (self.data) |dat| {
-                    var data = @constCast(dat);
-                    self.clean_value(data, allocator);
+                if (self.data) |data| {
+                    types.dispose(data, allocator);
                 }
             }
 
@@ -64,6 +39,11 @@ pub fn Trie(comptime T: type) type {
                 }
             }
 
+            if(node.data) |data| {
+                if (T == *types.Value) {
+                    types.dispose(data, allocator);
+                }
+            }
             node.data = value;
         }
 

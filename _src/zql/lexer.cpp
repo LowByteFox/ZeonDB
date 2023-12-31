@@ -1,3 +1,4 @@
+#include <logger.hpp>
 #include <zql/lexer.hpp>
 
 #include <string>
@@ -41,7 +42,7 @@ namespace ZeonDB::ZQL {
 
         char current = this->read_char();
 
-        while (current != '\n') {
+        while (current != '\n' && current != 0) {
             current = this->read_char();
         }
 

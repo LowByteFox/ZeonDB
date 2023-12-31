@@ -40,7 +40,7 @@ namespace ZeonDB::ZQL {
 				bool bool_val = false;
 
 				std::string str = this->code.substr(tok.col, tok.len);
-				if (str.compare("true")) {
+				if (str.compare("true") == 0) {
 					bool_val = true;
 				}
 
@@ -194,6 +194,7 @@ namespace ZeonDB::ZQL {
 					ctx.add_arg(arg);
 					if (arg.error.length() > 0) {
 						LOG_D("Context recieved an error!", nullptr);
+						ctx.error = arg.error;
 						break;
 					}
 				}

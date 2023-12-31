@@ -1,13 +1,14 @@
 #include <map>
 #include <string>
 
+#include <logger.hpp>
 #include <types.hpp>
 #include <collection.hpp>
 #include <accounts.hpp>
 
 namespace ZeonDB {
 	void Collection::assign_perm(std::string username, std::string key, Accounts::Permission perms) {
-		this->perms.emplace(username + ":" + key, perms);
+		this->perms[username + ":" + key] = perms;
 	}
 
 	bool Collection::has_perms(std::string username, std::string key) {
@@ -19,7 +20,7 @@ namespace ZeonDB {
 	}
 
 	void Collection::add(std::string key, std::shared_ptr<Types::Value> value) {
-		this->db.emplace(key, value);
+		this->db[key] = value;
 	}
 
 	std::shared_ptr<Types::Value> Collection::get(std::string key) {

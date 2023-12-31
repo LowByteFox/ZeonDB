@@ -87,7 +87,7 @@ namespace ZeonDB::Types {
 			case Type::Float:
 				return std::to_string(this->v.f);
 			case Type::Bool:
-				return std::to_string(this->v.b);
+				return this->v.b ? "true" : "false";
 			case Type::Collection:
 				return this->v.c.stringify(fmtType);
 		}

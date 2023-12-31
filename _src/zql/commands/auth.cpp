@@ -1,11 +1,15 @@
 #include <cstdio>
+#include <cstring>
 #include <memory>
 #include <optional>
 
+#include <ssl.hpp>
 #include <logger.hpp>
 #include <accounts.hpp>
 #include <types.hpp>
 #include <zql/ctx.hpp>
+
+#include <openssl/sha.h>
 
 using ZeonDB::Accounts::Permission;
 using ZeonDB::Types::Type;
@@ -14,6 +18,7 @@ using ZeonDB::Types::Value;
 const static std::string HELP_MSG = R"(help: auth (subcommand)
 get <key> (of <user>) -- get your permissions at <key> or from <user>
 set <key> <perm> (to <user>) -- set <perm> at <key> to yourself or to <user>
+create <user> <pass> <perm> -- create user <user> with password <pass> and default permission <perm>
 promote <user> -- allow user to manage accounts
 demote <user> -- disallow user to manage accounts
 
@@ -160,6 +165,44 @@ void set_perms(ZeonDB::ZQL::Context *ctx) {
 	}
 }
 
+void create_user(ZeonDB::ZQL::Context* ctx) {
+	auto target_user = ctx->get_arg(1);
+	auto pass = ctx->get_arg(2);
+	auto default_perm = ctx->get_arg(3);
+
+	std::optional<Permission> perm = val_to_perm(default_perm);
+
+	std::string user = ctx->get_user();
+	auto perms = ctx->get_perm("$");
+
+	if (!perms.can_manage) {
+		LOG_W("User \"%s\" tried to set permissions!", user.c_str());
+		ctx->error = "Permissions denied, cannot manage!";
+		return;
+	}
+
+	if (!perm.has_value()) {
+		LOG_W("User \"%s\" tried to set permissions, but are incorrect!", user.c_str());
+		ctx->error = "Permission are not complete!";
+		return;
+	}
+
+	Permission perm_val = perm.value();
+	perm_val.can_manage = false;
+
+	auto mgr = ctx->get_account_manager();
+
+	unsigned char out[SHA256_DIGEST_LENGTH];
+
+	ZeonDB::SSL::SHA256(pass->v.s.c_str(), out);
+	ZeonDB::Accounts::Account acc;
+
+	memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
+
+	mgr->register_account(target_user->v.s, acc);
+	ctx->get_db()->v.c.assign_perm(target_user->v.s, "$", perm_val);
+}
+
 void auth(ZeonDB::ZQL::Context* ctx) {
 	size_t arg_count = ctx->arg_count();
 	switch (arg_count) {
@@ -168,6 +211,9 @@ void auth(ZeonDB::ZQL::Context* ctx) {
 			break;
 		case 3:
 			set_perms(ctx);
+			break;
+		case 4:
+			create_user(ctx);
 			break;
 		default:
 			ctx->error = HELP_MSG;

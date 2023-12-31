@@ -40,8 +40,6 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    defer std.debug.assert(gpa.deinit() == .ok);
-
     var zeon = api.zeon_connection_init("127.0.0.1", 6748).?;
     defer api.zeon_connection_deinit(zeon);
 
@@ -50,13 +48,18 @@ pub fn main() !void {
         std.os.exit(1);
     }
 
-    if (api.zeon_connection_auth(zeon, "theo", "paris")) {
+    std.debug.print("Username: ", .{});
+    var username = try getline(allocator);
+    std.debug.print("Password: ", .{});
+    var password = try getline(allocator);
+
+    if (api.zeon_connection_auth(zeon, username, password)) {
         if (api.zeon_connection_dead(zeon)) {
             std.debug.print("Unable to contact ZeonDB\n", .{});
             std.os.exit(1);
         }
         while (true) {
-            std.debug.print("({s}@{s})> ", .{"theo", "127.0.0.1"});
+            std.debug.print("({s}@{s})> ", .{username, "127.0.0.1"});
             var command = try getline(allocator);
             defer allocator.free(command);
 
@@ -86,5 +89,7 @@ pub fn main() !void {
                 std.os.exit(1);
             }
         }
+    } else {
+        std.debug.print("{s}\n", .{zeon.res.data.buffer});
     }
 }

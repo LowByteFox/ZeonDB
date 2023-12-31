@@ -149,6 +149,8 @@ fn handle_frame(stream: [*c]uv.uv_stream_t, self: *ZeonConnection) void {
             _ = uv.uv_stop(self.loop);
             if (std.mem.eql(u8, buff[0..2], "OK")) {
                 self.authenticated = true;
+            } else {
+                self.res = ZeonResult.init_slice(.ZEON_ERR, buff);
             }
         },
         .Error => {

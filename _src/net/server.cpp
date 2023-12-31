@@ -157,7 +157,6 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	if (nread == UV_EOF) {
 		LOG_I("Client disconnected!", nullptr);
 		uv_read_stop(handle);
-		uv_close((uv_handle_t*)client->get_client(), close_client);
 		return;
 	}
 

@@ -57,7 +57,7 @@ namespace ZeonDB {
 	}
 
 	ZQL::ZqlTrace DB::execute(std::string script, std::string username) {
-		ZQL::Parser parser(this->db, script);
+		ZQL::Parser parser(this->db, script, &this->accs);
 		std::vector<ZQL::Context> ctxs = parser.parse();
 
 		std::shared_ptr<ZeonDB::Types::Value> tmp_buffer;

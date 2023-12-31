@@ -22,6 +22,11 @@ namespace ZeonDB::ZQL {
 		if (index >= this->args.size()) return nullptr;
 		return this->args[index].value;
 	}
+
+	ZeonDB::Accounts::AccountManager* Context::get_account_manager() {
+		return this->amgr;
+	}
+
 	std::string Context::get_arg_error(size_t index) {
 		if (index >= this->args.size()) return "";
 		return this->args[index].error;

@@ -21,6 +21,7 @@ namespace ZeonDB::ZQL {
 	class Context {
 		private:
 			std::shared_ptr<ZeonDB::Types::Value> db;
+			ZeonDB::Accounts::AccountManager *amgr;
 			std::vector<ZqlTrace> args;
 			ZqlFunction fn;
 			std::string user;
@@ -28,8 +29,9 @@ namespace ZeonDB::ZQL {
 			std::shared_ptr<ZeonDB::Types::Value>* temporary_buffer;
 			std::string error;
 
-			Context(std::shared_ptr<ZeonDB::Types::Value> collection) : db(collection) {}
-			Context(std::shared_ptr<ZeonDB::Types::Value> collection, std::string err) : db(collection), error(err) {}
+			Context(std::shared_ptr<ZeonDB::Types::Value> collection, ZeonDB::Accounts::AccountManager *am) : db(collection), amgr(am) {}
+			Context(std::shared_ptr<ZeonDB::Types::Value> collection, std::string err, ZeonDB::Accounts::AccountManager *am) : db(collection), amgr(am), error(err) {}
+			ZeonDB::Accounts::AccountManager *get_account_manager();
 			void set_user(std::string);
 			std::string get_user();
 			void add_arg(ZqlTrace);

@@ -22,7 +22,6 @@ namespace ZeonDB {
 			Conf::Config conf;
 			Accounts::AccountManager accs;
 			ZeonDB::Net::Server server;
-			// TODO: NETWORKING
 		public:
 			DB();
 			void register_account(std::string, Accounts::Account);

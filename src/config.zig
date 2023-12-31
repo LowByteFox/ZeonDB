@@ -22,11 +22,9 @@ const default_config = \\format = "JSON"
                        \\[communication.ip]
                        \\enable = true
                        \\port = 6748
-                       \\[communication.html]
-                       \\enable = false
                        ;
 
-const Config = struct {
+pub const Config = struct {
     format: []const u8, // ZQL | JSON
     persistence: ?struct {
         enable: bool,
@@ -46,17 +44,11 @@ const Config = struct {
         },
     },
     communication: ?struct {
-        max_connections: ?i32,
+        max_connections: usize,
         ip: ?struct {
             enable: bool,
             port: ?u16
-        },
-        html: ?struct {
-            enable: bool,
-            user: ?[]const u8,
-            workspace: ?[]const u8, // refrence to a collection where users can do whatever they want
-            mode: ?[]const u8 // r | w | rw
-        },
+        }
     },
 };
 

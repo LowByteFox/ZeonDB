@@ -2,6 +2,7 @@ const std = @import("std");
 const types = @import("../types.zig");
 const collection = @import("../collection.zig");
 const err = @import("errors.zig");
+const mem = @import("memory");
 
 pub const ZqlFunc = *const fn (ctx: *ZqlContext, allocator: std.mem.Allocator) anyerror!void;
 
@@ -9,13 +10,8 @@ pub const ZqlContextErr = error {
     FunctionNotSet
 };
 
-pub const MarkToSweep = struct {
-    sweep: bool,
-    ptr: *ZqlTrace,
-};
-
 pub const ZqlTrace = struct {
-    value: ?*types.Value,
+    value: ?*mem.AutoPtr(types.Value),
     err: ?[]u8,
 };
 
@@ -23,45 +19,48 @@ pub const ZqlTrace = struct {
 // or exception if happened
 pub const ZqlContext = struct {
     db: *collection.Collection,
-    args: std.ArrayList(MarkToSweep),
+    args: std.ArrayList(ZqlTrace),
     func: ?ZqlFunc,
-    buffer: ?*types.Value,
+    buffer: ?*mem.AutoPtr(types.Value),
+    user: ?[]const u8,
     err: ?[]u8,
     
     pub fn init(db: *collection.Collection, allocator: std.mem.Allocator) ZqlContext {
         return ZqlContext{
             .db = db,
-            .args = std.ArrayList(MarkToSweep).init(allocator),
+            .args = std.ArrayList(ZqlTrace).init(allocator),
             .func = null,
             .buffer = null,
             .err = null,
+            .user = null,
         };
     }
 
-    pub fn deinit(self: *ZqlContext, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *ZqlContext) void {
         for (self.args.items) |arg| {
-            if (arg.sweep) {
-                types.dispose(arg.ptr.value.?, allocator);
+            if (arg.value) |v| {
+                v.deinit();
             }
-            allocator.destroy(arg.ptr);
         }
         self.args.deinit();
     }
 
-    pub fn add_arg(self: *ZqlContext, arg: *ZqlTrace) !void {
-        try self.args.append(.{ .ptr = arg, .sweep = false });
+    pub fn set_user(self: *ZqlContext, username: []const u8) void {
+        self.user = username; 
     }
 
-    pub fn get_arg(self: *const ZqlContext, index: usize) ?*types.Value {
+    pub fn get_user(self: *ZqlContext) []const u8 {
+        return self.user.?;
+    }
+
+    pub fn add_arg(self: *ZqlContext, arg: ZqlTrace) !void {
+        try self.args.append(arg);
+    }
+
+    pub fn get_arg(self: *const ZqlContext, index: usize) ?*mem.AutoPtr(types.Value) {
         if (index > self.args.items.len) return null;
 
-        return self.args.items[index].ptr.value;
-    }
-
-    pub fn sweep_arg(self: *ZqlContext, index: usize) void {
-        if (index > self.args.items.len) return;
-
-        self.args.items[index].sweep = true;
+        return self.args.items[index].value;
     }
 
     pub fn get_arg_count(self: *const ZqlContext) usize {
@@ -72,13 +71,13 @@ pub const ZqlContext = struct {
         self.func = func;
     }
 
-    pub fn execute(self: *ZqlContext, buff: ?*types.Value, allocator: std.mem.Allocator) !?[]u8 {
+    pub fn execute(self: *ZqlContext, buff: ?*mem.AutoPtr(types.Value), allocator: std.mem.Allocator) !?[]u8 {
         if (buff) |b| {
             self.buffer = b;
         }
 
         for (self.args.items) |a| {
-            if (a.ptr.err) |e| {
+            if (a.err) |e| {
                 return e;
             }
         }
@@ -87,11 +86,7 @@ pub const ZqlContext = struct {
             try func(self, allocator);
             return null;
         }
+
         return ZqlContextErr.FunctionNotSet;
     }
-};
-
-pub const ZqlCmd = struct {
-    arg_count: i32,
-    func: ZqlFunc, 
 };

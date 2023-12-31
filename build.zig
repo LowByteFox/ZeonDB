@@ -5,6 +5,8 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
+    var network_mod = b.addModule("networking", .{ .source_file = .{ .path = "src/networking/main.zig" } });
+    var mem_mod = b.addModule("memory", .{ .source_file = .{ .path = "src/memory/main.zig" } });
 
     const exe = b.addExecutable(.{
         .name = "ZeonDB",
@@ -22,13 +24,18 @@ pub fn build(b: *std.Build) void {
 
     const toml = b.dependency("zigtoml", .{ .target = target, .optimize = optimize });
     exe.addModule("ztoml", toml.module("zig-toml"));
+    exe.addModule("networking", network_mod);
+    exe.addModule("memory", mem_mod);
 
-    const xev = b.dependency("libxev", .{ .target = target, .optimize = optimize });
-    exe.addModule("xev", xev.module("xev"));
-    client.addModule("xev", xev.module("xev"));
+    client.addModule("networking", network_mod);
+    client.addModule("memory", mem_mod);
 
     b.installArtifact(client);
     b.installArtifact(exe);
+
+    exe.linkSystemLibrary("uv");
+    client.linkSystemLibrary("uv");
+    client.linkLibC();
 
     const run_cmd = b.addRunArtifact(exe);
     const run_client = b.addRunArtifact(client);

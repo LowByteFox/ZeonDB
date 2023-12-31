@@ -10,6 +10,7 @@ pub const TokenTypes = enum {
     float,
     bool,
     colon,
+    semicolon,
     comma,
     lsquarebracket,
     rsquarebracket,
@@ -105,7 +106,7 @@ pub const Lexer = struct {
         const start = self.pos;
         var current: u8 = self.read_char();
 
-        while (std.ascii.isDigit(current) or std.ascii.isAlphabetic(current) or current == '_' or current == '$' or current == '.') {
+        while (std.ascii.isDigit(current) or std.ascii.isAlphabetic(current) or current == '_' or current == '$' or current == '.' or current == '@') {
             current = self.read_char();
         }
 
@@ -201,6 +202,14 @@ pub const Lexer = struct {
                     .line = self.line,
                 };
             },
+            ';' => {
+                return Token{
+                    .text = ":",
+                    .type = TokenTypes.semicolon,
+                    .col = self.col,
+                    .line = self.line,
+                };
+            },
             ',' => {
                 return Token{
                     .text = ",",
@@ -248,7 +257,7 @@ pub const Lexer = struct {
             else => {}
         }
 
-        if (std.ascii.isAlphabetic(tok) or tok == '_') {
+        if (std.ascii.isAlphabetic(tok) or tok == '_' or tok == '$') {
             try self.step_back(1);
             return try self.tokenize_identifier();
         } else if (std.ascii.isDigit(tok)) {

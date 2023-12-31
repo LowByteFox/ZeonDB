@@ -1,5 +1,13 @@
 const std = @import("std");
-const xev = @import("xev");
+const network = @import("networking");
+const api = @import("api.zig");
+
+pub fn indexof(buff: []const u8, char: u8) isize {
+    for (buff,0..) |c, i| {
+        if (c == char) return i;
+    }
+    return -1;
+}
 
 pub fn copy_over(buff: []u8, start: usize, str: []const u8) void {
     for (0..str.len) |i| {
@@ -7,42 +15,7 @@ pub fn copy_over(buff: []u8, start: usize, str: []const u8) void {
     }
 }
 
-pub fn strdup(buff: []const u8, allocator: std.mem.Allocator) ![]u8 {
-    var target = try allocator.alloc(u8, buff.len);
-    @memcpy(target, buff);
-    return target;
-}
-
-var last_in: []u8 = undefined;
-
-const Data = struct {
-    allocator: *const std.mem.Allocator,
-    tmpbuff: [1024]u8,
-    buffer: ?[]u8,
-    connection: xev.TCP,
-    read: xev.Completion,
-    written: usize,
-    status: i8,
-};
-
-fn getcol(begin: usize, str: []const u8) i32 {
-    var start: usize = 0;
-    var end: usize = 0;
-    for (begin..str.len) |i| {
-        if (str[i] == ':') {
-            start = i + 1;
-            end = i + 1;
-            while (std.ascii.isDigit(str[end])) { 
-                end += 1;
-            }
-            break;
-        }
-    }
-
-    return std.fmt.parseInt(i8, str[start..end], 10) catch -1;
-}
-
-fn getin(allocator: std.mem.Allocator) ![]u8 {
+fn getline(allocator: std.mem.Allocator) ![]u8 {
     const stdin = std.io.getStdIn().reader();
 
     var buff: [1024]u8 = undefined;
@@ -67,140 +40,56 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    defer std.debug.assert(gpa.deinit() == .ok);
-    
-    var loop = try xev.Loop.init(.{});
-    defer loop.deinit();
+    var zeon = api.zeon_connection_init("127.0.0.1", 6748).?;
+    defer api.zeon_connection_deinit(zeon);
 
-    var address = try std.net.Address.parseIp4("127.0.0.1", 6748);
+    if (api.zeon_connection_dead(zeon)) {
+        std.debug.print("Unable to contact ZeonDB\n", .{});
+        std.os.exit(1);
+    }
 
-    const client = try xev.TCP.init(address);
+    std.debug.print("Username: ", .{});
+    var username = try getline(allocator);
+    std.debug.print("Password: ", .{});
+    var password = try getline(allocator);
 
-    var compl: xev.Completion = undefined;
-
-    client.connect(&loop, &compl, address, std.mem.Allocator, @constCast(&allocator), &on_connect);
-
-    try loop.run(.until_done);
-}
-
-fn on_connect(allocator: ?*std.mem.Allocator, l: *xev.Loop, c: *xev.Completion, server: xev.TCP, r: xev.TCP.ConnectError!void) xev.CallbackAction {
-    _ = r catch unreachable;
-    var data = allocator.?.create(Data) catch unreachable;
-    data.allocator = allocator.?;
-    data.tmpbuff = undefined;
-    data.buffer = null;
-    data.connection = server;
-    data.written = 0;
-    data.status = -1;
-
-    std.debug.print("> ", .{});
-
-    var in = getin(data.allocator.*) catch unreachable;
-    data.buffer = std.fmt.allocPrint(data.allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-    last_in = in;
-
-    data.connection.write(l, c, .{ .slice = data.buffer.? }, Data, data, &on_write);
-
-    return .disarm;
-}
-
-pub fn on_read(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.ReadBuffer, r: xev.TCP.ReadError!usize) xev.CallbackAction {
-    var bytes_read = r catch unreachable;
-
-    const allocator = ud.?.allocator;
-
-    if (ud.?.buffer == null) {
-        var status = std.fmt.parseInt(i8, ud.?.tmpbuff[0..1], 10) catch {
-            return .disarm;
-        };
-
-        ud.?.status = status;
-
-        if (status == 0) {
-            std.debug.print("> ", .{});
-
-            var in = getin(allocator.*) catch unreachable;
-            ud.?.buffer = std.fmt.allocPrint(allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-            allocator.free(last_in);
-            last_in = in;
-            ud.?.tmpbuff = undefined;
-            ud.?.written = 0;
-
-            ud.?.connection.write(l, c, .{ .slice = ud.?.buffer.? }, Data, ud.?, &on_write);
-            return .disarm;
+    if (api.zeon_connection_auth(zeon, username, password)) {
+        if (api.zeon_connection_dead(zeon)) {
+            std.debug.print("Unable to contact ZeonDB\n", .{});
+            std.os.exit(1);
         }
+        while (true) {
+            std.debug.print("({s}@{s})> ", .{username, "127.0.0.1"});
+            var command = try getline(allocator);
+            defer allocator.free(command);
 
-        var i: usize = 2;
-        for (i..bytes_read) |index| {
-            if (!std.ascii.isDigit(ud.?.tmpbuff[index])) {
+            if (command.len >= 4 and std.mem.eql(u8, command[0..4], "exit")) {
                 break;
             }
-            i += 1;
-        }
-        
-        var len = std.fmt.parseInt(usize, ud.?.tmpbuff[2..i], 10) catch {
-            return .disarm;
-        };
-        i += 1; // space
 
-        ud.?.buffer = allocator.allocSentinel(u8, len, 0) catch {
-            return .disarm;
-        };
-
-        @memset(ud.?.buffer.?, 0);
-        @memcpy(ud.?.buffer.?[0..(bytes_read - i)], ud.?.tmpbuff[i..bytes_read]);
-
-        ud.?.written = bytes_read - i;
-    } else {
-        if (bytes_read > ud.?.buffer.?.len - ud.?.written) {
-            bytes_read = ud.?.buffer.?.len - ud.?.written;
-        }
-        @memcpy(ud.?.buffer.?[ud.?.written..(ud.?.written + bytes_read)], ud.?.tmpbuff[0..bytes_read]);
-        ud.?.written += bytes_read;
-    }
-
-    if (ud.?.written >= ud.?.buffer.?.len) {
-        if (ud.?.status == 1) {
-            var col = getcol(0, ud.?.buffer.?);
-            std.debug.print("{s}\n", .{ud.?.buffer.?});
-            if (col > 0) {
-                col -= 1;
-                std.debug.print("{s}\n", .{last_in});
-                for (0..@intCast(col)) |_| {
-                    std.debug.print(" ", .{});
-                }
-                if (@as(i32, @intCast(last_in.len)) > col) {
-                    for (0..@intCast((@as(i32, @intCast(last_in.len)) - col))) |_| {
-                        std.debug.print("^", .{});
-                    }
-                } else {
-                    std.debug.print("^", .{});
-                }
-                std.debug.print("\n", .{});
+            if (command.len > 1015) {
+                const leftover = (command.len - 1015) % 1024;
+                const tofill = 1024 - leftover;
+                command = try allocator.realloc(command, command.len + tofill);
             }
-        } else {
-            std.debug.print("{s}\n", .{ud.?.buffer.?});
+
+            var res = api.zeon_connection_execute(zeon, command);
+            defer res.deinit();
+
+            if (res.type == .ZEON_ERR) {
+                std.debug.print("{s}\n", .{res.data.buffer});
+            }
+
+            if (res.type == .ZEON_OK) {
+                std.debug.print("{s}\n", .{res.data.buffer});
+            }
+
+            if (res.type == .ZEON_DEAD) {
+                std.debug.print("Unable to contact ZeonDB\n", .{});
+                std.os.exit(1);
+            }
         }
-        std.debug.print("> ", .{});
-
-        var in = getin(allocator.*) catch unreachable;
-        ud.?.buffer = std.fmt.allocPrint(allocator.*, "{d}{s}", .{in.len, in}) catch unreachable;
-        allocator.free(last_in);
-        last_in = in;
-        ud.?.tmpbuff = undefined;
-        ud.?.written = 0;
-
-        ud.?.connection.write(l, c, .{ .slice = ud.?.buffer.? }, Data, ud.?, &on_write);
-        return .disarm;
+    } else {
+        std.debug.print("{s}\n", .{zeon.res.data.buffer});
     }
-    return .rearm;
-}
-
-pub fn on_write(ud: ?*Data, l: *xev.Loop, c: *xev.Completion, _: xev.TCP, _: xev.WriteBuffer, r: xev.TCP.WriteError!usize) xev.CallbackAction {
-    _ = r catch unreachable;
-    ud.?.allocator.free(ud.?.buffer.?);
-    ud.?.buffer = null;
-    @memset(ud.?.tmpbuff[0..1024], 0);
-    ud.?.connection.read(l, c, .{ .slice = &ud.?.tmpbuff }, Data, ud.?, &on_read);
-    return .disarm;
 }

@@ -128,7 +128,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 					client->send_message();
 				} else if (trace.value != nullptr) {
 					LOG_V("Execution ended with a Value!", nullptr);
-					std::string res = trace.value->stringify(FormatType::JSON);
+					std::string res = trace.value->stringify(FormatType::JSON, client->get_user());
 					memcpy(msg.data(), res.data(), res.length());
 					frame->to_buffer(ZeonFrameStatus::Command, res.length());
 					frame->write_buffer(msg);

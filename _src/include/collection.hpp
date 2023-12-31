@@ -27,6 +27,6 @@ namespace ZeonDB {
 			void add(std::string, std::shared_ptr<Types::Value>);
 			std::shared_ptr<Types::Value> get(std::string);
 
-			std::string stringify(Types::FormatType);
+			std::string stringify(Types::FormatType, std::string);
 	};
 }

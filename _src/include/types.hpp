@@ -43,7 +43,7 @@ namespace ZeonDB::Types {
 		static std::shared_ptr<Value> new_collection();
 
 		void array_append(std::shared_ptr<Value>);
-		std::string stringify(FormatType fmtType = FormatType::ZQL);
-		std::string stringify_array(FormatType);
+		std::string stringify(FormatType fmtType, std::string);
+		std::string stringify_array(FormatType, std::string);
 	};
 }

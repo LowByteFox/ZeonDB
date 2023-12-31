@@ -29,10 +29,24 @@ namespace ZeonDB {
 		return this->db[key];
 	}
 
-	std::string Collection::stringify(Types::FormatType fmtType) {
+	std::string Collection::stringify(Types::FormatType fmtType, std::string username) {
 		std::string str = "{";
 
+		if (this->has_perms(username, "$")) {
+			Accounts::Permission perms = this->get_perms(username, "$");
+			if (!perms.can_read) {
+				return "{}";
+			}
+		}
+
 		for (const auto& [key, value] : this->db) {
+			if (this->has_perms(username, key)) {
+				Accounts::Permission perms = this->get_perms(username, key);
+				if (!perms.can_read) {
+					continue;
+				}
+			}
+
 			if (key.find(' ') != std::string::npos || fmtType == Types::FormatType::JSON) {
 				if (fmtType == Types::FormatType::JSON) {
 					str += "\"" + key + "\":";
@@ -44,7 +58,7 @@ namespace ZeonDB {
 			}
 
 			str += " ";
-			str += value->stringify(fmtType);
+			str += value->stringify(fmtType, username);
 			if (fmtType == Types::FormatType::JSON) {
 				str += ", ";
 			} else {

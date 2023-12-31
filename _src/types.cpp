@@ -47,11 +47,11 @@ namespace ZeonDB::Types {
 		return ptr;
 	}
 
-	std::string Value::stringify_array(FormatType fmtType) {
+	std::string Value::stringify_array(FormatType fmtType, std::string username) {
 		std::string str = "[";
 
 		for (const auto& item : this->v.a) {
-			str += item->stringify(fmtType);
+			str += item->stringify(fmtType, username);
 			if (fmtType == FormatType::JSON) {
 				str += ", ";
 			} else {
@@ -72,10 +72,10 @@ namespace ZeonDB::Types {
 		return str;
 	}
 
-	std::string Value::stringify(FormatType fmtType) {
+	std::string Value::stringify(FormatType fmtType, std::string username) {
 		switch (this->t) {
 			case Type::Array:
-				return this->stringify_array(fmtType);
+				return this->stringify_array(fmtType, username);
 			case Type::String:
 				if (this->v.s.find(' ') != std::string::npos || fmtType == FormatType::JSON) {
 					return "\"" + this->v.s + "\"";
@@ -89,7 +89,7 @@ namespace ZeonDB::Types {
 			case Type::Bool:
 				return this->v.b ? "true" : "false";
 			case Type::Collection:
-				return this->v.c.stringify(fmtType);
+				return this->v.c.stringify(fmtType, username);
 		}
 		return "??";
 	}

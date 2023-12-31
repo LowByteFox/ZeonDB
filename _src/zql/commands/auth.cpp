@@ -164,60 +164,6 @@ void set_perms(ZeonDB::ZQL::Context *ctx, bool other_user) {
 	}
 }
 
-void set_perms_to(ZeonDB::ZQL::Context *ctx) {
-	auto key = ctx->get_arg(1);
-	auto value = ctx->get_arg(2);
-	auto target_user = ctx->get_arg(4); // <user>
-
-	std::optional<Permission> perm = val_to_perm(value);
-
-	std::string user = ctx->get_user();
-	auto perms = ctx->get_perm("$");
-
-	if (!perms.can_manage) {
-		LOG_W("User \"%s\" tried to set permissions!", user.c_str());
-		ctx->error = "Permissions denied, cannot manage!";
-		return;
-	}
-
-	if (!perm.has_value()) {
-		LOG_W("User \"%s\" tried to set permissions, but are incorrect!", user.c_str());
-		ctx->error = "Permission are not complete!";
-		return;
-	}
-
-	LOG_V("User \"%s\" is settings perms at \"%s\"", user.c_str(), key->v.s.c_str());
-
-	auto current = ctx->get_db();
-
-	if (key->v.s.compare("$") == 0) {
-		current->v.c.assign_perm(user, "$", perm.value());
-		return;
-	}
-
-	std::string s = "";
-	while ((s = key->v.s.next(".")).length() > 0) {
-		if (!key->v.s.peek(".")) {
-			current->v.c.assign_perm(target_user->v.s, s, perm.value());
-			break;
-		}
-
-		auto val = current->v.c.get(s);
-		if (val != nullptr) {
-			if (val->t != Type::Collection) {
-				ctx->error = "Collection expected at key " + s;
-				return;
-			}
-
-			current = val;
-			continue;
-		}
-
-		ctx->error = "No such key \"" + key->v.s + "\"!";
-		break;
-	}
-}
-
 void create_user(ZeonDB::ZQL::Context* ctx) {
 	auto target_user = ctx->get_arg(1);
 	auto pass = ctx->get_arg(2);

@@ -50,7 +50,7 @@ std::optional<Permission> val_to_perm(const std::shared_ptr<Value>& val) {
 	return perm;
 }
 
-void get_perms(ZeonDB::ZQL::Context* ctx) {
+void get_perms(ZeonDB::ZQL::Context* ctx, bool other_user) {
 	auto key = ctx->get_arg(1);
 
 	std::string user = ctx->get_user();
@@ -63,13 +63,19 @@ void get_perms(ZeonDB::ZQL::Context* ctx) {
 	}
 
 	LOG_V("User \"%s\" is accessing perms at \"%s\"", user.c_str(), key->v.s.c_str());
+	auto current = ctx->get_db();
+
+	if (other_user) {
+		auto target_user = ctx->get_arg(3); // <user>
+		user = target_user->v.s;
+		perms = current->v.c.get_perms(user, "$");
+	}
 
 	if (key->v.s.compare("$") == 0) {
 		*ctx->temporary_buffer = perm_to_val(perms);
 		return;
 	}
 
-	auto current = ctx->get_db();
 	std::string s = "";
 	while ((s = key->v.s.next(".")).length() > 0) {
 		if (!key->v.s.peek(".")) {
@@ -101,9 +107,68 @@ void get_perms(ZeonDB::ZQL::Context* ctx) {
 	}
 }
 
-void set_perms(ZeonDB::ZQL::Context *ctx) {
+void set_perms(ZeonDB::ZQL::Context *ctx, bool other_user) {
 	auto key = ctx->get_arg(1);
 	auto value = ctx->get_arg(2);
+	std::optional<Permission> perm = val_to_perm(value);
+
+	std::string user = ctx->get_user();
+	auto perms = ctx->get_perm("$");
+
+	if (!perms.can_manage) {
+		LOG_W("User \"%s\" tried to set permissions!", user.c_str());
+		ctx->error = "Permissions denied, cannot manage!";
+		return;
+	}
+
+	if (!perm.has_value()) {
+		LOG_W("User \"%s\" tried to set permissions, but are incorrect!", user.c_str());
+		ctx->error = "Permission are not complete!";
+		return;
+	}
+
+	LOG_V("User \"%s\" is settings perms at \"%s\"", user.c_str(), key->v.s.c_str());
+
+	if (other_user) {
+		auto target_user = ctx->get_arg(4); // <user>
+		user = target_user->v.s;
+	}
+
+	auto current = ctx->get_db();
+
+	if (key->v.s.compare("$") == 0) {
+		current->v.c.assign_perm(user, "$", perm.value());
+		return;
+	}
+
+	std::string s = "";
+	while ((s = key->v.s.next(".")).length() > 0) {
+		if (!key->v.s.peek(".")) {
+			current->v.c.assign_perm(user, s, perm.value());
+			break;
+		}
+
+		auto val = current->v.c.get(s);
+		if (val != nullptr) {
+			if (val->t != Type::Collection) {
+				ctx->error = "Collection expected at key " + s;
+				return;
+			}
+
+			current = val;
+			continue;
+		}
+
+		ctx->error = "No such key \"" + key->v.s + "\"!";
+		break;
+	}
+}
+
+void set_perms_to(ZeonDB::ZQL::Context *ctx) {
+	auto key = ctx->get_arg(1);
+	auto value = ctx->get_arg(2);
+	auto target_user = ctx->get_arg(4); // <user>
+
 	std::optional<Permission> perm = val_to_perm(value);
 
 	std::string user = ctx->get_user();
@@ -133,20 +198,12 @@ void set_perms(ZeonDB::ZQL::Context *ctx) {
 	std::string s = "";
 	while ((s = key->v.s.next(".")).length() > 0) {
 		if (!key->v.s.peek(".")) {
-			if (current->v.c.has_perms(user, s)) {
-				perms = current->v.c.get_perms(user, s);
-			}
-
-			current->v.c.assign_perm(user, s, perm.value());
+			current->v.c.assign_perm(target_user->v.s, s, perm.value());
 			break;
 		}
 
 		auto val = current->v.c.get(s);
 		if (val != nullptr) {
-			if (current->v.c.has_perms(user, s)) {
-				perms = current->v.c.get_perms(user, s);
-			}
-
 			if (val->t != Type::Collection) {
 				ctx->error = "Collection expected at key " + s;
 				return;
@@ -232,7 +289,7 @@ void auth(ZeonDB::ZQL::Context* ctx) {
 		{
 			auto subcmd = ctx->get_arg(0);
 			if (subcmd->v.s.compare("get") == 0) {
-				get_perms(ctx);
+				get_perms(ctx, false);
 			} else if (subcmd->v.s.compare("promote") == 0) {
 				manage_user(ctx, true);
 			} else if (subcmd->v.s.compare("demote") == 0) {
@@ -243,10 +300,22 @@ void auth(ZeonDB::ZQL::Context* ctx) {
 			break;
 		}
 		case 3:
-			set_perms(ctx);
+			set_perms(ctx, false);
 			break;
 		case 4:
-			create_user(ctx);
+		{
+			auto subcmd = ctx->get_arg(0);
+			if (subcmd->v.s.compare("create") == 0) {
+				create_user(ctx);
+			} else if (subcmd->v.s.compare("get") == 0) {
+				get_perms(ctx, true);
+			} else {
+				ctx->error = HELP_MSG;
+			}
+			break;
+		}
+		case 5:
+			set_perms(ctx, true);
 			break;
 		default:
 			ctx->error = HELP_MSG;

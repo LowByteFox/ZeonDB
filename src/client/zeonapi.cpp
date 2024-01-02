@@ -1,5 +1,6 @@
 #include <client/zeonapi.hpp>
 
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
@@ -64,7 +65,7 @@ namespace ZeonAPI {
 		msg.append((char *) out);
 
 		auto buffer = this->frame.read_buffer();
-		memcpy(buffer.data(), msg.data(), msg.length());
+		strncpy(buffer.data(), msg.data(), MIN(msg.length(), 1015));
 		this->frame.to_buffer(ZeonFrameStatus::Auth, msg.length());
 		this->frame.write_buffer(buffer);
 
@@ -80,7 +81,7 @@ namespace ZeonAPI {
 		this->buffer = "";
 
 		auto buffer = this->frame.read_buffer();
-		memcpy(buffer.data(), command.data(), command.length());
+		strncpy(buffer.data(), command.data(), MIN(command.length(), 1015));
 		this->frame.to_buffer(ZeonFrameStatus::Command, command.length());
 		this->frame.write_buffer(buffer);
 

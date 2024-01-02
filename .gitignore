@@ -3,6 +3,7 @@ libs/
 build/
 subprojects/
 log
+.dccache/
 
 # OpenBSD
 *.core

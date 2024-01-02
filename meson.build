@@ -6,6 +6,7 @@ files = ['src/main.cpp', 'src/types.cpp', 'src/collection.cpp',
          'src/zql/lexer.cpp', 'src/zql/parser.cpp', 'src/zql/ctx.cpp',
          'src/db.cpp', 'src/utils/string.cpp', 'src/net/frame.cpp',
          'src/net/client.cpp', 'src/net/server.cpp', 'src/logger.cpp',
+         'src/templates.cpp',
          'src/zql/commands/get.cpp', 'src/zql/commands/set.cpp',
          'src/zql/commands/auth.cpp'
          ]

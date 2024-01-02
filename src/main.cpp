@@ -8,7 +8,8 @@
 #include <db.hpp>
 #include <ssl.hpp>
 #include <zql/ctx.hpp>
-
+#include <types.hpp>
+#include <templates.hpp>
 #include <openssl/sha.h>
 
 #ifndef __ORDER_LITTLE_ENDIAN__
@@ -36,7 +37,28 @@ int main() {
 	db.register_account("theo", acc);
 	db.assign_perm("theo", "$", perm);
 
-	db.run();
+	ZeonDB::TemplateStore store;
+
+	ZeonDB::Template templ;
+	templ.add("ahoj", ZeonDB::Types::Value::new_int(0));
+	templ.add("cau", ZeonDB::Types::Value::new_float(0.0));
+	templ.add("xd", ZeonDB::Types::Value::new_collection());
+	templ.add("serus", ZeonDB::Types::Value::new_string(""));
+	templ.add("yay", ZeonDB::Types::Value::new_array());
+
+	ZeonDB::Template templ2;
+	templ2.add("yay", ZeonDB::Types::Value::new_string("This is different"));
+
+	store.add("cau", templ);
+	store.add("serus", templ2);
+
+	printf("%s\n",
+			store.create("cau")->stringify(ZeonDB::Types::FormatType::JSON, "theo").c_str());
+
+	printf("%s\n",
+			store.create("serus")->stringify(ZeonDB::Types::FormatType::JSON, "theo").c_str());
+
+	// db.run();
 	LOG_I("ZeonDB end!", nullptr);
 	return 0;
 }

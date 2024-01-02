@@ -90,6 +90,8 @@ namespace ZeonDB::Types {
 				return this->v.b ? "true" : "false";
 			case Type::Collection:
 				return this->v.c.stringify(fmtType, username);
+			default:
+				break;
 		}
 		return "??";
 	}

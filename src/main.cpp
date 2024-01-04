@@ -37,8 +37,6 @@ int main() {
 	db.register_account("theo", acc);
 	db.assign_perm("theo", "$", perm);
 
-	ZeonDB::TemplateStore store;
-
 	ZeonDB::Template templ;
 	templ.add("ahoj", ZeonDB::Types::Value::new_int(0));
 	templ.add("cau", ZeonDB::Types::Value::new_float(0.0));
@@ -46,19 +44,9 @@ int main() {
 	templ.add("serus", ZeonDB::Types::Value::new_string(""));
 	templ.add("yay", ZeonDB::Types::Value::new_array());
 
-	ZeonDB::Template templ2;
-	templ2.add("yay", ZeonDB::Types::Value::new_string("This is different"));
+	db.add_template("cau", templ);
 
-	store.add("cau", templ);
-	store.add("serus", templ2);
-
-	printf("%s\n",
-			store.create("cau")->stringify(ZeonDB::Types::FormatType::JSON, "theo").c_str());
-
-	printf("%s\n",
-			store.create("serus")->stringify(ZeonDB::Types::FormatType::JSON, "theo").c_str());
-
-	// db.run();
+	db.run();
 	LOG_I("ZeonDB end!", nullptr);
 	return 0;
 }

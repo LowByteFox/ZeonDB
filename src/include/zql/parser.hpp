@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 
-#include <accounts.hpp>
 #include <types.hpp>
 #include <zql/lexer.hpp>
 #include <zql/ctx.hpp>
@@ -16,12 +15,11 @@ namespace ZeonDB::ZQL {
 		private:
 			std::string code;
 			std::shared_ptr<ZeonDB::Types::Value> db;
-			ZeonDB::Accounts::AccountManager *amgr;
 			Lexer lexer;
 			ZqlTrace parse_primitive_value(Token);
 			ZqlTrace parse_value(Token);
 		public:
-			Parser(std::shared_ptr<ZeonDB::Types::Value> collection, std::string code, ZeonDB::Accounts::AccountManager* am) : amgr(am), lexer(code) {
+			Parser(std::shared_ptr<ZeonDB::Types::Value> collection, std::string code) : lexer(code) {
 				this->code = code;
 				this->db = collection;
 			}

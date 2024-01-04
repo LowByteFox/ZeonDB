@@ -13,11 +13,13 @@ using ZeonDB::Types::Value;
 extern void get(ZeonDB::ZQL::Context *ctx);
 extern void set(ZeonDB::ZQL::Context *ctx);
 extern void auth(ZeonDB::ZQL::Context *ctx);
+extern void template_cmd(ZeonDB::ZQL::Context *ctx);
 
 std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
 	{"get", get},
 	{"set", set},
 	{"auth", auth},
+	{"template", template_cmd},
 };
 
 namespace ZeonDB::ZQL {
@@ -165,21 +167,21 @@ namespace ZeonDB::ZQL {
 
 		LOG_D("Got token %s %d", this->code.substr(tok.col, tok.len).c_str(), tok.type);
 		if (tok.type != TokenTypes::identifier) {
-			Context ctx(this->db, "Expected identifier at " + std::to_string(tok.line) + ":" + std::to_string(tok.col), this->amgr);
+			Context ctx(this->db, "Expected identifier at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
 			ctxs.push_back(ctx);
 			return ctxs;
 		}
 
 		while (tok.type != TokenTypes::eof) {
 			if (tok.type != TokenTypes::identifier) {
-				Context ctx(this->db, "Expected identifier at " + std::to_string(tok.line) + ":" + std::to_string(tok.col), this->amgr);
+				Context ctx(this->db, "Expected identifier at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
 				ctxs.push_back(ctx);
 				return ctxs;
 			} else {
-				Context ctx(this->db, this->amgr);
+				Context ctx(this->db);
 				std::string fn_name = this->code.substr(tok.col, tok.len);
 				if (!commands.contains(fn_name)) {
-					Context ctx(this->db, "Unknown command at " + std::to_string(tok.line) + ":" + std::to_string(tok.col), this->amgr);
+					Context ctx(this->db, "Unknown command at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
 					ctxs.push_back(ctx);
 					return ctxs;
 				}

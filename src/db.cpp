@@ -39,6 +39,10 @@ namespace ZeonDB {
 		this->server.configure(this->conf.communication.ip.port);
 	}
 
+	void DB::add_template(std::string name, Template templ) {
+		this->templates.add(name, templ);
+	}
+
 	void DB::register_account(std::string username, Accounts::Account acc) {
 		this->accs.register_account(username, acc);
 	}
@@ -57,13 +61,15 @@ namespace ZeonDB {
 	}
 
 	ZQL::ZqlTrace DB::execute(std::string script, std::string username) {
-		ZQL::Parser parser(this->db, script, &this->accs);
+		ZQL::Parser parser(this->db, script);
 		std::vector<ZQL::Context> ctxs = parser.parse();
 
 		std::shared_ptr<ZeonDB::Types::Value> tmp_buffer;
 
 
 		for (auto& ctx : ctxs) {
+			ctx.amgr = &this->accs;
+			ctx.templ_store = &this->templates;
 			ctx.set_user(username);
 			if (ctx.error.length() > 0) {
 				return (ZQL::ZqlTrace) {

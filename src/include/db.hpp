@@ -8,6 +8,7 @@
 #include <types.hpp>
 #include <zql/ctx.hpp>
 #include <net/server.hpp>
+#include <templates.hpp>
 
 #include <openssl/sha.h>
 
@@ -22,9 +23,12 @@ namespace ZeonDB {
 			Conf::Config conf;
 			Accounts::AccountManager accs;
 			ZeonDB::Net::Server server;
+			TemplateStore templates;
+
 		public:
 			DB();
 			void register_account(std::string, Accounts::Account);
+			void add_template(std::string, Template);
 			bool login(std::string, unsigned char[SHA256_DIGEST_LENGTH]);
 			void assign_perm(std::string, std::string, Accounts::Permission);
 			ZQL::ZqlTrace execute(std::string, std::string);

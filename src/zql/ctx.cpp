@@ -27,6 +27,10 @@ namespace ZeonDB::ZQL {
 		return this->amgr;
 	}
 
+	ZeonDB::TemplateStore *Context::get_template_store() {
+		return this->templ_store;
+	}
+
 	std::string Context::get_arg_error(size_t index) {
 		if (index >= this->args.size()) return "";
 		return this->args[index].error;

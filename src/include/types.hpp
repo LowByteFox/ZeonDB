@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 
+#include <link.hpp>
 #include <utils/string.hpp>
 #include <collection.hpp>
 
@@ -22,6 +23,7 @@ namespace ZeonDB::Types {
 		Float,
 		Bool,
 		Collection,
+		Link,
 	};
 
 	struct Value {
@@ -33,6 +35,7 @@ namespace ZeonDB::Types {
 			double f;
 			bool b;
 			ZeonDB::Collection c;
+			ZeonDB::Link l;
 		} v;
 
 		static std::shared_ptr<Value> new_array();
@@ -41,8 +44,8 @@ namespace ZeonDB::Types {
 		static std::shared_ptr<Value> new_float(double);
 		static std::shared_ptr<Value> new_bool(bool);
 		static std::shared_ptr<Value> new_collection();
+		static std::shared_ptr<Value> new_link(std::string);
 
-		void array_append(std::shared_ptr<Value>);
 		std::string stringify(FormatType fmtType, std::string);
 		std::string stringify_array(FormatType, std::string);
 	};

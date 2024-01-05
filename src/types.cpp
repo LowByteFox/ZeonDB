@@ -47,6 +47,13 @@ namespace ZeonDB::Types {
 		return ptr;
 	}
 
+	std::shared_ptr<Value> Value::new_link(std::string target) {
+		auto ptr = std::make_shared<Value>();
+		ptr->t = Type::Link;
+		ptr->v.l.set_target(target);
+		return ptr;
+	}
+
 	std::string Value::stringify_array(FormatType fmtType, std::string username) {
 		std::string str = "[";
 
@@ -90,16 +97,15 @@ namespace ZeonDB::Types {
 				return this->v.b ? "true" : "false";
 			case Type::Collection:
 				return this->v.c.stringify(fmtType, username);
+			case Type::Link:
+			{
+				auto val = this->v.l.follow(username);
+				if (val == nullptr) return "";
+				return val->stringify(fmtType, username);
+			}
 			default:
 				break;
 		}
 		return "??";
-	}
-
-
-	void Value::array_append(std::shared_ptr<Value> value) {
-		if (this->t != Type::Array) return;
-
-		this->v.a.push_back(value);
 	}
 }

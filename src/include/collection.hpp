@@ -7,15 +7,15 @@
 
 #include <accounts.hpp>
 
-namespace ZeonDB::Types {
-	enum class FormatType;
-
-	enum class Type;
-
-	struct Value;
-}
-
 namespace ZeonDB {
+	namespace Types {
+		enum class FormatType;
+
+		enum class Type;
+
+		struct Value;
+	}
+
 	class Collection {
 		private:
 			std::map<std::string, std::shared_ptr<Types::Value>> db;

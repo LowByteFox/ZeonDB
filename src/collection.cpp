@@ -1,5 +1,6 @@
 #include <map>
 #include <string>
+#include <functional>
 
 #include <logger.hpp>
 #include <types.hpp>
@@ -27,6 +28,12 @@ namespace ZeonDB {
 		if (!this->db.contains(key)) return nullptr;
 
 		return this->db[key];
+	}
+
+	void Collection::iter(std::function<void(std::string, std::shared_ptr<Types::Value>)> fn) {
+		for (auto& [key, value] : this->db) {
+			fn(key, value);
+		}
 	}
 
 	std::string Collection::stringify(Types::FormatType fmtType, std::string username) {

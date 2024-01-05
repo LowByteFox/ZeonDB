@@ -15,13 +15,13 @@ namespace ZeonDB::ZQL {
 	}
 
 	void Lexer::step_back(size_t count) {
-		if (this->pos - count < 0) return;
 		this->pos -= count;
 		this->col -= count;
 	}
 
 	void Lexer::skip_blank() {
 		char current = this->read_char();
+
 		while (current == ' ' || current == '\t' || current == '\n') {
 			if (current == '\n') {
 				this->col = 0;
@@ -30,7 +30,6 @@ namespace ZeonDB::ZQL {
 			current = this->read_char();
 		}
 
-		if (current == 0) return;
 		this->step_back(1);
 	}
 
@@ -59,7 +58,7 @@ namespace ZeonDB::ZQL {
 
 		while (isdigit(current) || isalpha(current) || isdigit(current) ||
 				current == '_' || current == '$' || current == '.' ||
-				current == '@' || current == '[' || current == ']') {
+				current == '@' || current == '(' || current == ')') {
 			current = this->read_char();
 		}
 

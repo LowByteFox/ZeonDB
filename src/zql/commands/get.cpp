@@ -81,6 +81,7 @@ void get(ZeonDB::ZQL::Context* ctx) {
 get <key> -- set value of <key> as local buffer
 get local <key> -- set value of <key> from local buffer as local buffer
 
-key syntax: key@branch[index(..range)])";
+key syntax: key@branch(index..range)
+- the ..range is optional)";
 	}
 }

@@ -8,7 +8,8 @@ files = ['src/main.cpp', 'src/types.cpp', 'src/collection.cpp',
          'src/net/client.cpp', 'src/net/server.cpp', 'src/logger.cpp',
          'src/templates.cpp', 'src/link.cpp',
          'src/zql/commands/get.cpp', 'src/zql/commands/set.cpp',
-         'src/zql/commands/auth.cpp', 'src/zql/commands/template.cpp'
+         'src/zql/commands/auth.cpp', 'src/zql/commands/template.cpp',
+         'src/zql/commands/link.cpp'
          ]
 
 dirs = include_directories(['src/include/'])

@@ -14,12 +14,14 @@ extern void get(ZeonDB::ZQL::Context *ctx);
 extern void set(ZeonDB::ZQL::Context *ctx);
 extern void auth(ZeonDB::ZQL::Context *ctx);
 extern void template_cmd(ZeonDB::ZQL::Context *ctx);
+extern void link_cmd(ZeonDB::ZQL::Context *ctx);
 
 std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
 	{"get", get},
 	{"set", set},
 	{"auth", auth},
 	{"template", template_cmd},
+	{"link", link_cmd},
 };
 
 namespace ZeonDB::ZQL {

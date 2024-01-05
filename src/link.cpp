@@ -1,4 +1,5 @@
 #include <link.hpp>
+#include <logger.hpp>
 
 #include <string>
 #include <memory>
@@ -20,30 +21,29 @@ namespace ZeonDB {
 	std::shared_ptr<Types::Value> Link::follow(std::string user) {
 		auto current = this->root;
 
-		auto perms = this->root->v.c.get_perms(user, "$");
+		if (this->root->v.c.has_perms(user, "$")) {
+			auto perms = this->root->v.c.get_perms(user, "$");
+			if (!perms.can_read) return nullptr;
+		}
 
 		std::string s = "";
 		while ((s = this->target.next(".")).length() > 0) {
 			if (!this->target.peek(".")) {
-				if (current->v.c.has_perms(user, s)) {
-					perms = current->v.c.get_perms(user, s);
+				if (current->v.c.has_perms(user, "$")) {
+					auto perms = this->root->v.c.get_perms(user, "$");
+					if (!perms.can_read) return nullptr;
 				}
 
-				if (!perms.can_read) break;
-
+				this->target.reset_iter();
 				auto val = current->v.c.get(s);
-
 				return val;
 			}
 
 			auto val = current->v.c.get(s);
 			if (val != nullptr) {
-				if (current->v.c.has_perms(user, s)) {
-					perms = current->v.c.get_perms(user, s);
-				}
-
-				if (!perms.can_read) {
-					break;
+				if (current->v.c.has_perms(user, "$")) {
+					auto perms = this->root->v.c.get_perms(user, "$");
+					if (!perms.can_read) return nullptr;
 				}
 
 				if (val->t != Types::Type::Collection) {
@@ -55,6 +55,7 @@ namespace ZeonDB {
 			}
 			break;
 		}
+		this->target.reset_iter();
 		return nullptr;
 	}
 }

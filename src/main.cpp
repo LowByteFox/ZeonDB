@@ -12,7 +12,10 @@
 #include <templates.hpp>
 #include <openssl/sha.h>
 
-#ifndef __ORDER_LITTLE_ENDIAN__
+#if defined(_WIN32) || defined(__LITTLE_ENDIAN__) ||(defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#elif defined(__BIG_ENDIAN__) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#error "__ORDER_LITTLE_ENDIAN__ must be defined, use different compiler!"
+#else
 #error "__ORDER_LITTLE_ENDIAN__ must be defined, use different compiler!"
 #endif
 

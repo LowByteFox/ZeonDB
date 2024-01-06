@@ -2,6 +2,8 @@
 
 #include <string>
 #include <map>
+#include <unordered_map>
+#include <wy.hpp>
 #include <memory>
 #include <functional>
 
@@ -18,7 +20,7 @@ namespace ZeonDB {
 
 	class Collection {
 		private:
-			std::map<std::string, std::shared_ptr<Types::Value>> db;
+			std::unordered_map<std::string, std::shared_ptr<Types::Value>, wy::hash<std::string>> db;
 			std::map<std::string, Accounts::Permission> perms;
 
 		public:

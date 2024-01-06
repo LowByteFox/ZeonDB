@@ -12,7 +12,7 @@ files = ['src/main.cpp', 'src/types.cpp', 'src/collection.cpp',
          'src/zql/commands/link.cpp'
          ]
 
-dirs = include_directories(['src/include/'])
+dirs = include_directories(['src/include/', 'external/'])
 
 zeon_client_api = library('zeonapi', ['src/client/zeonapi.cpp', 'src/net/frame.cpp', 'src/ssl.cpp'],
   dependencies: [dependency('openssl'),

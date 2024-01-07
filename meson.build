@@ -1,5 +1,6 @@
 project('ZeonDB', 'cpp',
-  default_options: ['cpp_std=c++20'])
+  default_options: ['cpp_std=c++20'],
+  version: '0.5.0')
 
 files = ['src/main.cpp', 'src/types.cpp', 'src/collection.cpp',
          'src/ssl.cpp', 'src/accounts.cpp', 'src/config.cpp',
@@ -19,14 +20,22 @@ zeon_client_api = library('zeonapi', ['src/client/zeonapi.cpp', 'src/net/frame.c
                   dependency('libuv')],
   include_directories: dirs)
 
+cxxflags = ['-DZEON_VERSION="' + meson.project_version() + '"',
+            '-DARGPARSE_VERSION="' + dependency('argparse').version() + '"',
+            '-DTOMLPLUSPLUS_VERSION="' + dependency('tomlplusplus', static: true).version() + '"']
+
 executable('ZeonCTL', 'src/client/main.cpp',
   link_with: zeon_client_api,
   dependencies: [dependency('openssl'),
-                  dependency('libuv')],
-  include_directories: dirs)
+                  dependency('libuv'),
+                  dependency('argparse', static: true)],
+  include_directories: dirs,
+  cpp_args: cxxflags)
 
 executable('ZeonDB', files,
   dependencies: [dependency('openssl'),
                   dependency('tomlplusplus', static: true),
+                  dependency('argparse', static: true),
                   dependency('libuv')],
-  include_directories: dirs)
+  include_directories: dirs,
+  cpp_args: cxxflags)

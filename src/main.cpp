@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <memory>
 
@@ -11,17 +12,54 @@
 #include <types.hpp>
 #include <templates.hpp>
 #include <openssl/sha.h>
+#include <argparse/argparse.hpp>
+
+#include <uv.h>
+#include <openssl/opensslv.h>
 
 #if defined(_WIN32) || defined(__LITTLE_ENDIAN__) ||(defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #elif defined(__BIG_ENDIAN__) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-#error "__ORDER_LITTLE_ENDIAN__ must be defined, use different compiler!"
+#error "No little endian :("
 #else
-#error "__ORDER_LITTLE_ENDIAN__ must be defined, use different compiler!"
+#error "No little endian :("
+#endif
+
+#ifdef LIBRESSL_VERSION_NUMBER
+	#define SSL_LIBRARY "LibreSSL"
+	#define SSL_VERSION LIBRESSL_VERSION_TEXT
+#elif defined(OPENSSL_VERSION_NUMBER)
+	#define SSL_LIBRARY "OpenSSL"
+	#define SSL_VERSION OPENSSL_VERSION_TEXT
 #endif
 
 ZeonDB::Logger LOG("log");
 
-int main() {
+void version() {
+	printf("ZeonDB (%s) - Multi-model, high performance, NoSQL database\n\nDependencies:\n", ZEON_VERSION);
+	printf("%s (%s)\n", SSL_LIBRARY, &SSL_VERSION[strlen(SSL_LIBRARY) + 1]);
+	printf("libuv (%s)\n", uv_version_string());
+	printf("tomlplusplus (%s)\n", TOMLPLUSPLUS_VERSION);
+	printf("argparse (%s)\n", ARGPARSE_VERSION);
+	exit(0);
+}
+
+int main(int argc, char **argv) {
+	argparse::ArgumentParser program("ZeonDB", ZEON_VERSION, argparse::default_arguments::help);
+
+	program.add_argument("-v", "--version")
+		.action([=](const std::string& _) {
+			version();
+		})
+		.help("print version of ZeonDB")
+		.nargs(0);
+
+	try {
+		program.parse_args(argc, argv);
+	} catch (const std::exception& err) {
+		LOG_E("%s", err.what());
+		std::exit(1);
+	}
+	
 	ZeonDB::DB db;
 
 	unsigned char out[SHA256_DIGEST_LENGTH];

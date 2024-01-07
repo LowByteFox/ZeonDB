@@ -35,7 +35,7 @@
 ZeonDB::Logger LOG("log");
 
 void version() {
-	printf("ZeonDB (%s) - Multi-model, high performance, NoSQL database\n\nDependencies:\n", ZEON_VERSION);
+	printf("ZeonDB (%s) - Multi-model, high performance, NoSQL database\n\nBuilt with:\n", ZEON_VERSION);
 	printf("%s (%s)\n", SSL_LIBRARY, &SSL_VERSION[strlen(SSL_LIBRARY) + 1]);
 	printf("libuv (%s)\n", uv_version_string());
 	printf("tomlplusplus (%s)\n", TOMLPLUSPLUS_VERSION);
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 	try {
 		program.parse_args(argc, argv);
 	} catch (const std::exception& err) {
-		LOG_E("%s", err.what());
+		fprintf(stderr, "%s\n", err.what());
 		std::exit(1);
 	}
 	

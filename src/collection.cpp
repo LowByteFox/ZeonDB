@@ -36,7 +36,7 @@ namespace ZeonDB {
 		}
 	}
 
-	std::string Collection::stringify(Types::FormatType fmtType, std::string username) {
+	std::string Collection::stringify(Types::FormatType fmtType, std::string username, ZeonDB::Types::RecursionProtector* protector) {
 		std::string str = "{";
 
 		if (this->has_perms(username, "$")) {
@@ -65,7 +65,7 @@ namespace ZeonDB {
 			}
 
 			str += " ";
-			str += value->stringify(fmtType, username);
+			str += value->_stringify(fmtType, username, protector);
 			if (fmtType == Types::FormatType::JSON) {
 				str += ", ";
 			} else {

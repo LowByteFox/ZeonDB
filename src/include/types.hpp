@@ -26,6 +26,10 @@ namespace ZeonDB::Types {
 		Link,
 	};
 
+	struct Value;
+
+	using RecursionProtector = std::vector<std::shared_ptr<Value>>;
+
 	struct Value {
 		Type t;
 		struct {
@@ -47,6 +51,7 @@ namespace ZeonDB::Types {
 		static std::shared_ptr<Value> new_link(std::string);
 
 		std::string stringify(FormatType fmtType, std::string);
-		std::string stringify_array(FormatType, std::string);
+		std::string _stringify(FormatType fmtType, std::string, RecursionProtector*);
+		std::string _stringify_array(FormatType, std::string, RecursionProtector*);
 	};
 }

@@ -1,6 +1,7 @@
 #include <link.hpp>
 #include <logger.hpp>
 
+#include <algorithm>
 #include <string>
 #include <memory>
 #include <types.hpp>
@@ -18,7 +19,7 @@ namespace ZeonDB {
 		this->root = root;
 	}
 
-	std::shared_ptr<Types::Value> Link::follow(std::string user) {
+	std::shared_ptr<Types::Value> Link::follow(std::string user, Types::RecursionProtector* protector) {
 		auto current = this->root;
 
 		if (this->root->v.c.has_perms(user, "$")) {
@@ -36,6 +37,9 @@ namespace ZeonDB {
 
 				this->target.reset_iter();
 				auto val = current->v.c.get(s);
+				if (std::find(protector->begin(), protector->end(), val) != protector->end()) {
+					return nullptr;
+				}
 				return val;
 			}
 

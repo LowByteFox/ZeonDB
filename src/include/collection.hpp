@@ -31,6 +31,6 @@ namespace ZeonDB {
 			std::shared_ptr<Types::Value> get(std::string);
 			void iter(std::function<void(std::string, std::shared_ptr<Types::Value>)>);
 
-			std::string stringify(Types::FormatType, std::string);
+			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);
 	};
 }

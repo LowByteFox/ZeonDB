@@ -54,11 +54,11 @@ namespace ZeonDB::Types {
 		return ptr;
 	}
 
-	std::string Value::stringify_array(FormatType fmtType, std::string username) {
+	std::string Value::_stringify_array(FormatType fmtType, std::string username, RecursionProtector* protector) {
 		std::string str = "[";
 
 		for (const auto& item : this->v.a) {
-			str += item->stringify(fmtType, username);
+			str += item->_stringify(fmtType, username, protector);
 			if (fmtType == FormatType::JSON) {
 				str += ", ";
 			} else {
@@ -80,9 +80,14 @@ namespace ZeonDB::Types {
 	}
 
 	std::string Value::stringify(FormatType fmtType, std::string username) {
+		RecursionProtector protector;
+		return this->_stringify(fmtType, username, &protector);
+	}
+
+	std::string Value::_stringify(FormatType fmtType, std::string username, RecursionProtector* protector) {
 		switch (this->t) {
 			case Type::Array:
-				return this->stringify_array(fmtType, username);
+				return this->_stringify_array(fmtType, username, protector);
 			case Type::String:
 				if (this->v.s.find(' ') != std::string::npos || fmtType == FormatType::JSON) {
 					return "\"" + this->v.s + "\"";
@@ -96,12 +101,16 @@ namespace ZeonDB::Types {
 			case Type::Bool:
 				return this->v.b ? "true" : "false";
 			case Type::Collection:
-				return this->v.c.stringify(fmtType, username);
+				return this->v.c.stringify(fmtType, username, protector);
 			case Type::Link:
 			{
-				auto val = this->v.l.follow(username);
-				if (val == nullptr) return "";
-				return val->stringify(fmtType, username);
+				auto val = this->v.l.follow(username, protector);
+				if (val == nullptr) return "\"\"";
+
+				protector->push_back(val);
+				std::string str = val->_stringify(fmtType, username, protector);
+				protector->pop_back();
+				return str;
 			}
 			default:
 				break;

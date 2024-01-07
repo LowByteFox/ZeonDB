@@ -11,6 +11,7 @@ namespace ZeonDB {
 		enum class Type;
 
 		struct Value;
+		using RecursionProtector = std::vector<std::shared_ptr<Value>>;
 	}
 
 	class Link {
@@ -23,6 +24,6 @@ namespace ZeonDB {
 			std::string get_target();
 			void set_root(std::shared_ptr<Types::Value>);
 
-			std::shared_ptr<Types::Value> follow(std::string user);
+			std::shared_ptr<Types::Value> follow(std::string user, Types::RecursionProtector*);
 	};
 }

@@ -2,10 +2,6 @@ project('ZeonDB', 'cpp',
   default_options: ['cpp_std=c++20'],
   version: '0.6.0')
 
-subdir('webview')
-webview = declare_dependency(include_directories: webview_include, link_with: webview_lib)
-subdir('ZeonUI')
-
 files = ['src/main.cpp', 'src/types.cpp', 'src/collection.cpp',
          'src/ssl.cpp', 'src/accounts.cpp', 'src/config.cpp',
          'src/zql/lexer.cpp', 'src/zql/parser.cpp', 'src/zql/ctx.cpp',

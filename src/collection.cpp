@@ -21,17 +21,17 @@ namespace ZeonDB {
 	}
 
 	void Collection::add(std::string key, std::shared_ptr<Types::Value> value) {
-		this->db[key] = value;
+		this->db[this->def_ver][key] = value;
 	}
 
 	std::shared_ptr<Types::Value> Collection::get(std::string key) {
-		if (!this->db.contains(key)) return nullptr;
+		if (!this->db[this->def_ver].contains(key)) return nullptr;
 
-		return this->db[key];
+		return this->db[this->def_ver][key];
 	}
 
 	void Collection::iter(std::function<void(std::string, std::shared_ptr<Types::Value>)> fn) {
-		for (auto& [key, value] : this->db) {
+		for (auto& [key, value] : this->db[this->def_ver]) {
 			fn(key, value);
 		}
 	}
@@ -46,7 +46,7 @@ namespace ZeonDB {
 			}
 		}
 
-		for (const auto& [key, value] : this->db) {
+		for (const auto& [key, value] : this->db[this->def_ver]) {
 			if (this->has_perms(username, key)) {
 				Accounts::Permission perms = this->get_perms(username, key);
 				if (!perms.can_read) {

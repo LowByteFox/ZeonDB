@@ -4,6 +4,7 @@ build/
 subprojects/
 log
 .dccache/
+webview/webview
 
 # OpenBSD
 *.core

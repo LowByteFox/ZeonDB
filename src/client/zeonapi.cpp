@@ -27,6 +27,10 @@ void send_msg(uv_write_t *req, int status) {
     delete req;
 }
 
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
+
 namespace ZeonAPI {
 	void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t* _);
 	void alloc_buff(uv_handle_t *handle, size_t _, uv_buf_t *buf);
@@ -44,6 +48,7 @@ namespace ZeonAPI {
 		
 		this->tcp.data = this;
 
+		uv_run(this->loop, UV_RUN_ONCE); // Debilny windows sprosty
 		uv_read_start((uv_stream_t*) &this->tcp, alloc_buff, on_read);
 		uv_run(this->loop, UV_RUN_DEFAULT);
 		this->connected = true;

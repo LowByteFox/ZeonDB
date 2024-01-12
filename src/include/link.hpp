@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 #include <utils/string.hpp>
 
 namespace ZeonDB {

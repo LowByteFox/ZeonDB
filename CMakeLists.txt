@@ -11,6 +11,9 @@ add_compile_definitions(ARGPARSE_VERSION="v3.0")
 add_compile_definitions(TOMLPLUSPLUS_VERSION="v3.4.0")
 include_directories("src/include/" "external/")
 link_directories("/usr/local/lib") # CMake forgets to set it, because of PkgConfig
+if(WIN32)
+	link_libraries("-static")
+endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SSL libressl QUIET)

@@ -160,7 +160,7 @@ namespace ZeonAPI {
 			{
 				auto buff = client->frame.read_buffer();
 				uv_read_stop(stream);
-				memset(buff.data() + client->frame.get_length(), 0, 1024 - client->frame.get_length());
+				memset(buff.data() + client->frame.get_length(), 0, 1015 - client->frame.get_length());
 
 				if (memcmp(buff.data(), "OK", 2) == 0) {
 					client->authenticated = true;
@@ -172,7 +172,7 @@ namespace ZeonAPI {
 			case ZeonFrameStatus::Error:
 			{
 				auto buff = client->frame.read_buffer();
-				memset(buff.data() + client->frame.get_length(), 0, 1024 - client->frame.get_length());
+				memset(buff.data() + client->frame.get_length(), 0, 1015 - client->frame.get_length());
 				uv_read_stop(stream);
 
 				client->error = buff.data();
@@ -181,7 +181,7 @@ namespace ZeonAPI {
 			case ZeonFrameStatus::Command:
 			{
 				auto buff = client->frame.read_buffer();
-				memset(buff.data() + client->frame.get_length(), 0, 1024 - client->frame.get_length());
+				memset(buff.data() + client->frame.get_length(), 0, 1015 - client->frame.get_length());
 				uv_read_stop(stream);
 
 				client->buffer = buff.data();

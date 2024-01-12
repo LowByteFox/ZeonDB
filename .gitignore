@@ -1,7 +1,6 @@
 zig-*/
 libs/
 build/
-subprojects/
 log
 .dccache/
 webview/webview

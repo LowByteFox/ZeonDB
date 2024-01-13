@@ -1,0 +1,223 @@
+<html>
+<head>
+<script src="litegraph.js"></script>
+<link href="litegraph.css" rel="stylesheet">
+</head>
+<body>
+<canvas id='mycanvas'></canvas>
+</body>
+<style>
+body, html {
+	margin: 0;
+	padding: 0;
+}
+
+canvas {
+	display: block;
+}
+
+#node-panel {
+	display: none;
+}
+
+</style>
+<script>
+"use strict";
+
+let can = document.getElementById("mycanvas");
+can.width = window.innerWidth;
+can.height = window.innerHeight;
+
+window.onresize = () => {
+	can.width = window.innerWidth;
+	can.height = window.innerHeight;
+}
+
+LiteGraph.clearRegisteredTypes();
+
+function ZeonValue()
+{
+	this.addInput("");
+	this.addOutput("");
+	this.title = "Value";
+	this.prev_name = "";
+	this.name = this.addWidget("text", "Name", "", (v) => {
+		if (this.parent != null) {
+			delete this.parent.root[this.prev_name];
+		}
+		this.prev_name = v;
+	}, {} );
+	this.first_init = false;
+	this.setValue(this.val);
+	this.root = {};
+	this.parent = null;
+}
+
+ZeonValue.prototype.setName = function(name) {
+	this.name.value = name;
+	this.prev_name = name;
+}
+
+ZeonValue.prototype.onConnectionsChange = function(inout, slot, connected, ...args) {
+	if (this.first_init) {
+		this.widgets = this.widgets.filter(v => v != this.value);
+		this.setSize(this.computeSize());
+		this.first_init = false;
+	}
+
+	if (inout == LiteGraph.OUTPUT) {
+		if (!connected && this.outputs[0].links.length == 0) {
+			this.setValue(this.val);
+		} else {
+			this.widgets = this.widgets.filter(v => v != this.value);
+			this.setSize(this.computeSize());
+		}
+	} else {
+		if (!connected && this.parent != null) {
+			delete this.parent.root[this.prev_name];
+		}
+	}
+}
+
+ZeonValue.prototype.setValue = function(value) {
+	this.widgets = this.widgets.filter(v => v != this.value);
+	this.setSize(this.computeSize());
+	this.value = this.addWidget("text", "Value", value, v => {this.val = v}, { multiline:true } );
+	this.val = value;
+}
+
+ZeonValue.prototype.onExecute = function() {
+	let input = this.getInputData(0);
+	if (input == undefined) {
+		this.setOutputData(0, {
+			nodes: [this],
+			value: this.val,
+			root: this.root,
+		});
+
+		return;
+	};
+
+	for (let node of input.nodes) {
+		if (node == this) {
+			node.disconnectInput(0);
+			return;
+		}
+
+		if (node != this.parent) continue;
+
+		if (node.root[this.name.value] == undefined) {
+			node.root[this.name.value] = this.root;
+		} 
+	};
+
+	this.parent = input.nodes.at(-1);
+	if (this.outputs[0].links == undefined) {
+		this.parent.root[this.name.value] = this.val;
+	}
+
+	this.setOutputData(0, {
+		nodes: [...input.nodes, this],
+		value: this.val,
+		root: this.root
+	});
+}
+
+function DebugNode() {
+	this.addInput("");
+	this.title = "Debug";
+	this.connected = false;
+	this.old_data = null;
+	this.widgets = [];
+}
+
+DebugNode.prototype.onConnectionsChange = function(inout, slot, connected, ...args) {
+	this.connected = connected;
+	if (this.connected == false) {
+		this.widgets = [];
+		this.setSize(this.computeSize());
+	}
+}
+
+DebugNode.prototype.onExecute = function() {
+	if (this.connected == false) return;
+
+	let data = this.getInputData(0);
+	if (data == this.old_data) return;
+	this.old_data = data;
+	let names = data.nodes.map(n => n.name.value);
+	if (this.widgets.length == 0) {
+		this.addWidget("text", "Path", names.join("."), () => {}, {});
+		this.addWidget("text", "Value", data.value, () => {}, {multiline: true});
+		this.addWidget("text", "Tree", JSON.stringify(data.root, null, 4), () => {}, {multiline: true});
+	} else {
+		this.widgets[0].value = names.join(".");
+		this.widgets[1].value = data.value;
+		this.widgets[2].value = JSON.stringify(data.root, null, 4);
+	}
+}
+
+LiteGraph.registerNodeType("value", ZeonValue);
+LiteGraph.registerNodeType("debug", DebugNode);
+
+var graph = new LGraph({ allow_interaction: false });
+var canvas = new LGraphCanvas("#mycanvas", graph);
+
+function node_gen(tree) {
+    let pos = [100, 125];
+    let queue = [];
+	let iter = 0;
+    queue.push({tree, key: "root", pos});
+    
+    while(queue.length > 0) {
+        let current = queue.shift();
+        let x = current.pos[0];
+        let y = current.pos[1];
+
+		// skip root
+		if (iter == 0) {
+			iter++;
+		} else {
+			x += 250;
+			var node = LiteGraph.createNode("value");
+			node.pos = current.pos;
+			node.setName(current.key);
+			graph.add(node);
+
+			if (typeof current.tree != "object") {
+				node.setValue(current.tree);
+			}
+
+			if (current.node != undefined) {
+				current.node.connect(0, node, 0);
+				node.parent = current.node;
+			}
+
+			current.node = node;
+		}
+
+        if (typeof current.tree != "object") continue;
+        
+        for (let i in current.tree) {
+            queue.push({tree: current.tree[i], key: i, pos: [x, y], node: current.node});
+            y += 125;
+        }
+    }
+}
+
+node_gen({
+    ahoj: {
+		cau: {
+			tykokos: "ano"
+		},
+		dalsia: true,
+		next: 3.14,
+		omg: 77,
+    },
+    serus: "nazdar"
+});
+
+graph.start()
+</script>
+
+</html>

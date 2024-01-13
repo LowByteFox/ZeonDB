@@ -4,6 +4,8 @@ build/
 log
 .dccache/
 webview/webview
+ZeonUI/litegraph.js
+ZeonUI/litegraph.css
 
 # OpenBSD
 *.core

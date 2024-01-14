@@ -71,12 +71,12 @@ int main(int argc, char **argv) {
 			}
 
 			if (!zeon.exec(cmd)) {
-				printf("%s\n", zeon.get_error().c_str());
+				printf("%s\n", zeon.get_error()->c_str());
 			} else {
-				printf("%s\n", zeon.get_buffer().c_str());
+				printf("%s\n", zeon.get_buffer()->c_str());
 			}
 		}
 	} else {
-		fprintf(stderr, "Could not login! %s\n", zeon.get_error().c_str());
+		fprintf(stderr, "Could not login! %s\n", zeon.get_error()->c_str());
 	}
 }

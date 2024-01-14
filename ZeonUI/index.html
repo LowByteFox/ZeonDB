@@ -20,6 +20,10 @@ canvas {
 	display: none;
 }
 
+.litecontextmenu {
+	display: none;
+}
+
 </style>
 <script>
 "use strict";
@@ -35,54 +39,60 @@ window.onresize = () => {
 
 LiteGraph.clearRegisteredTypes();
 
+function set_v(key, value) {
+	if (value == undefined) return;
+	if (value.match(/^(\d+|\d+\.\d+)$/) || value.match(/^(true|false)$/)) {
+		console.log(`set ${key} ${value}`);
+	} else {
+		console.log(`set ${key} "${value}"`);
+	}
+}
+
 function ZeonValue()
 {
 	this.addInput("");
 	this.addOutput("");
 	this.title = "Value";
-	this.prev_name = "";
-	this.name = this.addWidget("text", "Name", "", (v) => {
-		if (this.parent != null) {
-			delete this.parent.root[this.prev_name];
-		}
-		this.prev_name = v;
-	}, {} );
-	this.first_init = false;
-	this.setValue(this.val);
-	this.root = {};
+	this.name = this.addWidget("text", "Name", "", v => {
+		this.key = v + ".";
+	}, {});
+	this.setValue("");
 	this.parent = null;
+	this.key = "";
+	this.later_assign = false;
 }
 
 ZeonValue.prototype.setName = function(name) {
 	this.name.value = name;
-	this.prev_name = name;
+	this.key = name + ".";
 }
 
 ZeonValue.prototype.onConnectionsChange = function(inout, slot, connected, ...args) {
-	if (this.first_init) {
-		this.widgets = this.widgets.filter(v => v != this.value);
-		this.setSize(this.computeSize());
-		this.first_init = false;
-	}
-
 	if (inout == LiteGraph.OUTPUT) {
 		if (!connected && this.outputs[0].links.length == 0) {
 			this.setValue(this.val);
 		} else {
-			this.widgets = this.widgets.filter(v => v != this.value);
+			this.widgets = [this.widgets[0]];
 			this.setSize(this.computeSize());
 		}
 	} else {
-		if (!connected && this.parent != null) {
-			delete this.parent.root[this.prev_name];
+		if (this.parent == null) {
+			this.later_assign = true;
+		}
+		if (!connected) {
+			this.key = "";
+			this.key = this.name.value + ".";
 		}
 	}
 }
 
 ZeonValue.prototype.setValue = function(value) {
-	this.widgets = this.widgets.filter(v => v != this.value);
+	this.widgets = [this.widgets[0]];
 	this.setSize(this.computeSize());
 	this.value = this.addWidget("text", "Value", value, v => {this.val = v}, { multiline:true } );
+	this.setBtn = this.addWidget("button", "Set", null, () => {
+		set_v(this.key.slice(0, -1), this.val);
+	}, {});
 	this.val = value;
 }
 
@@ -92,7 +102,6 @@ ZeonValue.prototype.onExecute = function() {
 		this.setOutputData(0, {
 			nodes: [this],
 			value: this.val,
-			root: this.root,
 		});
 
 		return;
@@ -103,23 +112,17 @@ ZeonValue.prototype.onExecute = function() {
 			node.disconnectInput(0);
 			return;
 		}
-
-		if (node != this.parent) continue;
-
-		if (node.root[this.name.value] == undefined) {
-			node.root[this.name.value] = this.root;
-		} 
 	};
 
 	this.parent = input.nodes.at(-1);
-	if (this.outputs[0].links == undefined) {
-		this.parent.root[this.name.value] = this.val;
+	this.key = this.parent.key + this.name.value + ".";
+	if (this.later_assign) {
+		this.later_assign = false;
 	}
 
 	this.setOutputData(0, {
 		nodes: [...input.nodes, this],
 		value: this.val,
-		root: this.root
 	});
 }
 
@@ -127,8 +130,26 @@ function DebugNode() {
 	this.addInput("");
 	this.title = "Debug";
 	this.connected = false;
-	this.old_data = null;
 	this.widgets = [];
+}
+
+function ActionNode() {
+	this.addInput("");
+	this.title = "Action";
+	this.connected = false;
+	this.widgets = [];
+}
+
+ActionNode.prototype.onExecute = function() {
+	if (this.connected == false) return;
+
+	let data = this.getInputData(0);
+	let names = data.nodes.map(n => n.name.value);
+	let node = data.nodes.at(-1);
+	if (node.node_type == "value") {
+	}
+	
+	this.connected = false;
 }
 
 DebugNode.prototype.onConnectionsChange = function(inout, slot, connected, ...args) {
@@ -143,18 +164,10 @@ DebugNode.prototype.onExecute = function() {
 	if (this.connected == false) return;
 
 	let data = this.getInputData(0);
-	if (data == this.old_data) return;
-	this.old_data = data;
 	let names = data.nodes.map(n => n.name.value);
-	if (this.widgets.length == 0) {
-		this.addWidget("text", "Path", names.join("."), () => {}, {});
-		this.addWidget("text", "Value", data.value, () => {}, {multiline: true});
-		this.addWidget("text", "Tree", JSON.stringify(data.root, null, 4), () => {}, {multiline: true});
-	} else {
-		this.widgets[0].value = names.join(".");
-		this.widgets[1].value = data.value;
-		this.widgets[2].value = JSON.stringify(data.root, null, 4);
-	}
+	this.addWidget("text", "Path", names.join("."), () => {}, {});
+	this.addWidget("text", "Value", data.value, () => {}, {multiline: true});
+	this.connected = false;
 }
 
 LiteGraph.registerNodeType("value", ZeonValue);
@@ -185,12 +198,13 @@ function node_gen(tree) {
 			graph.add(node);
 
 			if (typeof current.tree != "object") {
-				node.setValue(current.tree);
+				if (typeof current.tree == "string") node.setValue(current.tree);
+				else node.setValue(JSON.stringify(current.tree));
 			}
 
 			if (current.node != undefined) {
-				current.node.connect(0, node, 0);
 				node.parent = current.node;
+				current.node.connect(0, node, 0);
 			}
 
 			current.node = node;
@@ -200,7 +214,7 @@ function node_gen(tree) {
         
         for (let i in current.tree) {
             queue.push({tree: current.tree[i], key: i, pos: [x, y], node: current.node});
-            y += 125;
+            y += 150;
         }
     }
 }

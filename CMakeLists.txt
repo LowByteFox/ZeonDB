@@ -54,12 +54,17 @@ FetchContent_MakeAvailable(argparse)
 
 file(GLOB_RECURSE ZEONDB_SOURCES "src/*.cpp")
 list(FILTER ZEONDB_SOURCES EXCLUDE REGEX "src/client/.*")
-
 add_library(ZeonAPI "src/client/zeonapi.cpp" "src/net/frame.cpp" "src/ssl.cpp")
 target_include_directories(ZeonAPI PRIVATE ${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
 target_link_directories(ZeonAPI PRIVATE ${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
 target_link_libraries(ZeonAPI PRIVATE ${SSL_LIBRARIES} ${UV_LIBRARIES})
 target_compile_options(ZeonAPI PRIVATE ${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
+
+add_library(ZeonCAPI STATIC "src/client/zeonapi.cpp" "src/client/zeonapi_c.cpp" "src/net/frame.cpp" "src/ssl.cpp")
+target_include_directories(ZeonCAPI PRIVATE ${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
+target_link_directories(ZeonCAPI PRIVATE ${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
+target_link_libraries(ZeonCAPI PRIVATE ${SSL_LIBRARIES} ${UV_LIBRARIES} ZeonAPI)
+target_compile_options(ZeonCAPI PRIVATE ${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
 
 add_executable(ZeonDB ${ZEONDB_SOURCES})
 target_include_directories(ZeonDB PRIVATE ${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})

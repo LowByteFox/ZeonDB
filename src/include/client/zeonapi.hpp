@@ -32,8 +32,8 @@ namespace ZeonAPI {
 			Connection(std::string, uint16_t);
 			~Connection();
 			bool is_up();
-			std::string get_error();
-			std::string get_buffer();
+			std::string* get_error();
+			std::string* get_buffer();
 			bool auth(std::string, std::string);
 			bool exec(std::string);
 	};

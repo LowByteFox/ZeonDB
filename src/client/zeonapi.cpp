@@ -101,12 +101,12 @@ namespace ZeonAPI {
 		return this->connected;
 	}
 
-	std::string Connection::get_error() {
-		return this->error;
+	std::string* Connection::get_error() {
+		return &this->error;
 	}
 
-	std::string Connection::get_buffer() {
-		return this->buffer;
+	std::string* Connection::get_buffer() {
+		return &this->buffer;
 	}
 
 	void Connection::send_message() {

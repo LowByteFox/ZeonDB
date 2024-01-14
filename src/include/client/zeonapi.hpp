@@ -13,7 +13,7 @@ namespace ZeonAPI {
 		friend void handle_frame(ZeonAPI::Connection *client, uv_stream_t *stream);
 
 		private:
-			uv_loop_t *loop;
+			uv_loop_t loop;
 			uv_tcp_t tcp;
 			uv_connect_t conn;
 			uv_buf_t uv_buf;

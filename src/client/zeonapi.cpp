@@ -37,26 +37,28 @@ namespace ZeonAPI {
 	void handle_frame(ZeonAPI::Connection *client, uv_stream_t stream);
 
 	Connection::Connection(std::string ip, uint16_t port) {
-		this->loop = uv_default_loop();
 		this->read = 0;
 		this->authenticated = false;
 		this->connected = false;
 
+		uv_loop_init(&this->loop);
+
 		uv_ip4_addr(ip.c_str(), port, &this->addr);
-		uv_tcp_init(this->loop, &this->tcp);
+		uv_tcp_init(&this->loop, &this->tcp);
 		uv_tcp_connect(&this->conn, &this->tcp, (const struct sockaddr*)&this->addr, on_connect);
 		
 		this->tcp.data = this;
 
-		uv_run(this->loop, UV_RUN_ONCE); // Debilny windows sprosty
+		uv_run(&this->loop, UV_RUN_ONCE); // Debilny windows sprosty
 		uv_read_start((uv_stream_t*) &this->tcp, alloc_buff, on_read);
-		uv_run(this->loop, UV_RUN_DEFAULT);
+		uv_run(&this->loop, UV_RUN_DEFAULT);
 		this->connected = true;
 	}
 
 	Connection::~Connection() {
 		uv_close((uv_handle_t*) &this->tcp, nullptr);
-		uv_run(this->loop, UV_RUN_ONCE);
+		uv_run(&this->loop, UV_RUN_ONCE);
+		uv_loop_close(&this->loop);
 		this->connected = false;
 		this->authenticated = false;
 	}
@@ -76,7 +78,7 @@ namespace ZeonAPI {
 
 		this->send_message();
 		uv_read_start((uv_stream_t*) &this->tcp, alloc_buff, on_read);
-		uv_run(this->loop, UV_RUN_DEFAULT);
+		uv_run(&this->loop, UV_RUN_DEFAULT);
 
 		return this->authenticated;
 	}
@@ -92,7 +94,7 @@ namespace ZeonAPI {
 
 		this->send_message();
 		uv_read_start((uv_stream_t*) &this->tcp, alloc_buff, on_read);
-		uv_run(this->loop, UV_RUN_DEFAULT);
+		uv_run(&this->loop, UV_RUN_DEFAULT);
 
 		return this->error.length() == 0;
 	}
@@ -130,7 +132,7 @@ namespace ZeonAPI {
 	void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t* _) {
 		auto* client = static_cast<ZeonAPI::Connection*>(stream->data);
 		if (nread == UV_EOF) {
-			uv_stop(client->loop);
+			uv_stop(&client->loop);
 			uv_read_stop(stream);
 			return;
 		}
@@ -145,7 +147,7 @@ namespace ZeonAPI {
 		} else if (nread == 0) {
 		} else {
 			fprintf(stderr, "Something went wrong! %s\n", uv_strerror((int) nread));
-			uv_stop(client->loop);
+			uv_stop(&client->loop);
 			client->connected = false;
 		}
 	}

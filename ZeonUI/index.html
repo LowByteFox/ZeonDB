@@ -28,6 +28,8 @@ canvas {
 <script>
 "use strict";
 
+const socket = new WebSocket(`ws://${window.location.host}/ws`);
+
 let can = document.getElementById("mycanvas");
 can.width = window.innerWidth;
 can.height = window.innerHeight;
@@ -42,9 +44,15 @@ LiteGraph.clearRegisteredTypes();
 function set_v(key, value) {
 	if (value == undefined) return;
 	if (value.match(/^(\d+|\d+\.\d+)$/) || value.match(/^(true|false)$/)) {
-		console.log(`set ${key} ${value}`);
+		socket.send(JSON.stringify({
+			type: "exec",
+			code: `set ${key} ${value.trim()}`
+		}));
 	} else {
-		console.log(`set ${key} "${value}"`);
+		socket.send(JSON.stringify({
+			type: "exec",
+			code: `set ${key} "${value.trim()}"`,
+		}));
 	}
 }
 
@@ -59,12 +67,13 @@ function ZeonValue()
 	this.setValue("");
 	this.parent = null;
 	this.key = "";
-	this.later_assign = false;
+	this.key_cp = "";
 }
 
 ZeonValue.prototype.setName = function(name) {
 	this.name.value = name;
 	this.key = name + ".";
+	this.key_cp = this.key;
 }
 
 ZeonValue.prototype.onConnectionsChange = function(inout, slot, connected, ...args) {
@@ -76,9 +85,6 @@ ZeonValue.prototype.onConnectionsChange = function(inout, slot, connected, ...ar
 			this.setSize(this.computeSize());
 		}
 	} else {
-		if (this.parent == null) {
-			this.later_assign = true;
-		}
 		if (!connected) {
 			this.key = "";
 			this.key = this.name.value + ".";
@@ -91,9 +97,17 @@ ZeonValue.prototype.setValue = function(value) {
 	this.setSize(this.computeSize());
 	this.value = this.addWidget("text", "Value", value, v => {this.val = v}, { multiline:true } );
 	this.setBtn = this.addWidget("button", "Set", null, () => {
+		console.log(this.key);
 		set_v(this.key.slice(0, -1), this.val);
 	}, {});
 	this.val = value;
+}
+
+ZeonValue.prototype.onRemoved = function() {
+	socket.send(JSON.stringify({
+		type: "exec",
+		code: `delete ${this.key_cp.slice(0, -1)}`,
+	}));
 }
 
 ZeonValue.prototype.onExecute = function() {
@@ -116,9 +130,7 @@ ZeonValue.prototype.onExecute = function() {
 
 	this.parent = input.nodes.at(-1);
 	this.key = this.parent.key + this.name.value + ".";
-	if (this.later_assign) {
-		this.later_assign = false;
-	}
+	this.key_cp = this.key;
 
 	this.setOutputData(0, {
 		nodes: [...input.nodes, this],
@@ -219,17 +231,29 @@ function node_gen(tree) {
     }
 }
 
-node_gen({
-    ahoj: {
-		cau: {
-			tykokos: "ano"
-		},
-		dalsia: true,
-		next: 3.14,
-		omg: 77,
-    },
-    serus: "nazdar"
-});
+let gen_map = true;
+
+socket.onmessage = (ev) => {
+	let data = JSON.parse(ev.data);
+	if (data.ok) {
+		if (gen_map) {
+			let value = JSON.parse(data.value);
+			node_gen(value);
+			gen_map = false;
+		}
+
+		console.log(data.value);
+	} else {
+		console.error(data.value);
+	}
+}
+
+socket.onopen = e => {
+	socket.send(JSON.stringify({
+		type: "exec",
+		code: "get $",
+	}));
+}
 
 graph.start()
 </script>

@@ -1,21 +1,18 @@
-#include <cstdio>
-#include <string>
-
-#include <types.hpp>
 #include <zql/ctx.hpp>
 
-using ZeonDB::Types::Type;
-using ZeonDB::Types::Value;
-
-void set_casual(ZeonDB::ZQL::Context* ctx) {
+void del_casual(ZeonDB::ZQL::Context* ctx) {
 	auto key = ctx->get_arg(0);
-	auto value = ctx->get_arg(1);
 
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
 
-	if (!perms.can_write) {
+	if (!perms.can_read) {
 		ctx->error = "Permissions deniend, unable to write!";
+		return;
+	}
+
+	if (key->v.s.compare("$") == 0) {
+		ctx->error = "You cannot delete the root!";
 		return;
 	}
 
@@ -32,7 +29,12 @@ void set_casual(ZeonDB::ZQL::Context* ctx) {
 				return;
 			}
 
-			current->v.c.add(s, value);
+			bool ret = current->v.c.del(s);
+
+			if (!ret) {
+				ctx->error = "No such key \"" + key->v.s + "\"!";
+				return;
+			}
 			break;
 		}
 
@@ -47,28 +49,25 @@ void set_casual(ZeonDB::ZQL::Context* ctx) {
 				return;
 			}
 
-			val->t = Type::Collection;
-
 			current = val;
 			continue;
 		}
-		auto v = Value::new_collection();
-		current->v.c.add(s, v);
-		current = v;
+
+		ctx->error = "No such key \"" + key->v.s + "\"!";
+		break;
 	}
 }
 
-void set(ZeonDB::ZQL::Context* ctx) {
+void del(ZeonDB::ZQL::Context* ctx) {
 	size_t arg_count = ctx->arg_count();
 	switch (arg_count) {
-		case 2:
-			set_casual(ctx);
+		case 1:
+			del_casual(ctx);
 			break;
 		default:
-			ctx->error = R"(help: set (local) <key> (<value>)(from (local) <key2>)
-set <key> <value> -- set <value> at specific <key>
-set local <key> <value> -- set <value> at specific <key> in local buffer
-set local <key> from <key2> -- set value from <key2> at specific <key> in local buffer
+			ctx->error = R"(help: delete (local) <key>
+delete <key> -- delete value at <key>
+delete local <key> -- delete value at key <key> in local buffer
 
 key syntax: key@branch(index..range)
 - the ..range is optional)";

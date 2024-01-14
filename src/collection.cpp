@@ -24,6 +24,15 @@ namespace ZeonDB {
 		this->db[this->def_ver][key] = value;
 	}
 
+	bool Collection::del(std::string key) {
+		bool has = this->db[this->def_ver].contains(key);
+		if (!has) return has;
+
+		this->db[this->def_ver].erase(key);
+
+		return has;
+	}
+
 	std::shared_ptr<Types::Value> Collection::get(std::string key) {
 		if (!this->db[this->def_ver].contains(key)) return nullptr;
 

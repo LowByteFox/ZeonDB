@@ -10,6 +10,7 @@
 
 using ZeonDB::Types::Value;
 
+extern void help(ZeonDB::ZQL::Context *ctx);
 extern void get(ZeonDB::ZQL::Context *ctx);
 extern void del(ZeonDB::ZQL::Context *ctx);
 extern void set(ZeonDB::ZQL::Context *ctx);
@@ -18,6 +19,7 @@ extern void template_cmd(ZeonDB::ZQL::Context *ctx);
 extern void link_cmd(ZeonDB::ZQL::Context *ctx);
 
 std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
+	{"help", help},
 	{"get", get},
 	{"delete", del},
 	{"set", set},

@@ -63,11 +63,13 @@ function ZeonValue()
 	this.title = "Value";
 	this.name = this.addWidget("text", "Name", "", v => {
 		this.key = v + ".";
+		this.key_cp = this.key;
 	}, {});
 	this.setValue("");
 	this.parent = null;
 	this.key = "";
 	this.key_cp = "";
+	this.delete = false;
 }
 
 ZeonValue.prototype.setName = function(name) {

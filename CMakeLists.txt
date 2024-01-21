@@ -52,28 +52,25 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(argparse)
 
+include_directories(${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
+link_directories(${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
+link_libraries(${SSL_LIBRARIES} ${UV_LIBRARIES})
+add_compile_options(${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
+
 file(GLOB_RECURSE ZEONDB_SOURCES "src/*.cpp")
 list(FILTER ZEONDB_SOURCES EXCLUDE REGEX "src/client/.*")
 add_library(ZeonAPI "src/client/zeonapi.cpp" "src/net/frame.cpp" "src/ssl.cpp")
-target_include_directories(ZeonAPI PRIVATE ${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
-target_link_directories(ZeonAPI PRIVATE ${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
-target_link_libraries(ZeonAPI PRIVATE ${SSL_LIBRARIES} ${UV_LIBRARIES})
-target_compile_options(ZeonAPI PRIVATE ${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
 
-add_library(ZeonCAPI STATIC "src/client/zeonapi.cpp" "src/client/zeonapi_c.cpp" "src/net/frame.cpp" "src/ssl.cpp")
-target_include_directories(ZeonCAPI PRIVATE ${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
-target_link_directories(ZeonCAPI PRIVATE ${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
-target_link_libraries(ZeonCAPI PRIVATE ${SSL_LIBRARIES} ${UV_LIBRARIES} ZeonAPI)
-target_compile_options(ZeonCAPI PRIVATE ${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
+add_library(ZeonCAPI STATIC "src/client/zeonapi.cpp" "src/client/zeonapi_c.cpp"
+	"src/net/frame.cpp" "src/ssl.cpp")
+
+add_library(ZeonCAPI_Shared SHARED "src/client/zeonapi.cpp"
+	"src/client/zeonapi_c.cpp" "src/net/frame.cpp" "src/ssl.cpp")
+
+set_target_properties(ZeonCAPI_Shared PROPERTIES OUTPUT_NAME ZeonCAPI)
 
 add_executable(ZeonDB ${ZEONDB_SOURCES})
-target_include_directories(ZeonDB PRIVATE ${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
-target_link_directories(ZeonDB PRIVATE ${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
-target_link_libraries(ZeonDB PRIVATE ${SSL_LIBRARIES} ${UV_LIBRARIES} tomlplusplus::tomlplusplus argparse::argparse)
-target_compile_options(ZeonDB PRIVATE ${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
+target_link_libraries(ZeonDB tomlplusplus::tomlplusplus argparse::argparse)
 
 add_executable(ZeonCTL "src/client/main.cpp")
-target_include_directories(ZeonCTL PRIVATE ${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
-target_link_directories(ZeonCTL PRIVATE ${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
-target_link_libraries(ZeonCTL PRIVATE ${SSL_LIBRARIES} ${UV_LIBRARIES} ZeonAPI argparse::argparse)
-target_compile_options(ZeonCTL PRIVATE ${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
+target_link_libraries(ZeonCTL ZeonAPI argparse::argparse)

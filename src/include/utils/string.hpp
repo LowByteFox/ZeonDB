@@ -13,6 +13,7 @@ namespace ZeonDB::Utils {
 
 			std::string next(std::string);
 			bool peek(std::string);
+			bool contains(std::string);
 			void reset_iter();
 	};
 }

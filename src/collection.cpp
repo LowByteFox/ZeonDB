@@ -6,6 +6,7 @@
 #include <types.hpp>
 #include <collection.hpp>
 #include <accounts.hpp>
+#include <utils/string.hpp>
 
 namespace ZeonDB {
 	void Collection::assign_perm(std::string username, std::string key, Accounts::Permission perms) {
@@ -20,26 +21,56 @@ namespace ZeonDB {
 		return this->perms[username + ":" + key];
 	}
 
-	void Collection::add(std::string key, std::shared_ptr<Types::Value> value) {
-		this->db[this->def_ver][key] = value;
+	void Collection::add(ZeonDB::Utils::String key, std::shared_ptr<Types::Value> value) {
+		std::string new_key = key.c_str();
+		std::string version = this->def_ver;
+
+		if (key.contains("@")) {
+			new_key = key.next("@");
+			version = key.next("@");
+		}
+
+		this->db[version][new_key] = value;
 	}
 
-	bool Collection::del(std::string key) {
-		bool has = this->db[this->def_ver].contains(key);
+	bool Collection::del(ZeonDB::Utils::String key) {
+		std::string new_key = key.c_str();
+		std::string version = this->def_ver;
+
+		if (key.contains("@")) {
+			new_key = key.next("@");
+			version = key.next("@");
+		}
+
+		bool has = this->db[version].contains(new_key);
 		if (!has) return has;
 
-		this->db[this->def_ver].erase(key);
+		if (version == this->def_ver) {
+			for (auto& pair: this->db) {
+				LOG_D("VERSION: %s", pair.first.c_str());
+				pair.second.erase(new_key);
+			}
+		}
+		this->db[version].erase(new_key);
 
 		return has;
 	}
 
-	std::shared_ptr<Types::Value> Collection::get(std::string key) {
-		if (!this->db[this->def_ver].contains(key)) return nullptr;
+	std::shared_ptr<Types::Value> Collection::get(ZeonDB::Utils::String key) {
+		std::string new_key = key.c_str();
+		std::string version = this->def_ver;
 
-		return this->db[this->def_ver][key];
+		if (key.contains("@")) {
+			new_key = key.next("@");
+			version = key.next("@");
+		}
+
+		if (!this->db[version].contains(new_key)) return nullptr;
+
+		return this->db[version][new_key];
 	}
 
-	void Collection::iter(std::function<void(std::string, std::shared_ptr<Types::Value>)> fn) {
+	void Collection::iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)> fn) {
 		for (auto& [key, value] : this->db[this->def_ver]) {
 			fn(key, value);
 		}

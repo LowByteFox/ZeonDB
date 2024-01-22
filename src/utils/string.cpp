@@ -19,6 +19,10 @@ namespace ZeonDB::Utils {
 		return this->find(delimiter, this->iter_pos - delimiter.size()) != std::string::npos;
 	}
 
+	bool String::contains(std::string to_find) {
+		return this->find(to_find) != std::string::npos;
+	}
+
 	void String::reset_iter() {
 		this->iter_pos = 0;
 	}

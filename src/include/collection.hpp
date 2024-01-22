@@ -8,6 +8,7 @@
 #include <functional>
 
 #include <accounts.hpp>
+#include <utils/string.hpp>
 
 namespace ZeonDB {
 	namespace Types {
@@ -22,7 +23,7 @@ namespace ZeonDB {
 
 	class Collection {
 		private:
-			std::map<std::string, Map> db;
+			std::map<ZeonDB::Utils::String, Map> db;
 			std::map<std::string, Accounts::Permission> perms;
 			std::string def_ver = "default";
 
@@ -30,10 +31,10 @@ namespace ZeonDB {
 			void assign_perm(std::string, std::string, Accounts::Permission);
 			bool has_perms(std::string, std::string);
 			Accounts::Permission get_perms(std::string, std::string);
-			void add(std::string, std::shared_ptr<Types::Value>);
-			bool del(std::string);
-			std::shared_ptr<Types::Value> get(std::string);
-			void iter(std::function<void(std::string, std::shared_ptr<Types::Value>)>);
+			void add(ZeonDB::Utils::String, std::shared_ptr<Types::Value>);
+			bool del(ZeonDB::Utils::String);
+			std::shared_ptr<Types::Value> get(ZeonDB::Utils::String);
+			void iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)>);
 
 			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);
 	};

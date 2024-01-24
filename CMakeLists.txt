@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CTEST_COLOR_OUTPUT TRUE)
+set(CMAKE_COLOR_MAKEFILE TRUE)
+set(CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+enable_testing()
 
 add_compile_definitions(ZEON_VERSION="${PROJECT_VERSION}")
 add_compile_definitions(ARGPARSE_VERSION="v3.0")
@@ -74,3 +78,5 @@ target_link_libraries(ZeonDB tomlplusplus::tomlplusplus argparse::argparse)
 
 add_executable(ZeonCTL "src/client/main.cpp")
 target_link_libraries(ZeonCTL ZeonAPI argparse::argparse)
+
+add_subdirectory(tests)

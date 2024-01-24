@@ -1,4 +1,4 @@
-let dylib;
+let dylib: unknown;
 const text_encoder = new TextEncoder();
 
 export function initZeonDB(path: string): void {
@@ -50,12 +50,12 @@ export function initZeonDB(path: string): void {
 
 interface ZeonResult {
 	ok: boolean,
-	value: any,
+	value: unknown,
 	msg: string,
 }
 
 export class ZeonDB {
-	private connection;
+	private connection: unknown;
 
 	constructor(ip: string, port: number) {
 		return Promise.resolve(
@@ -90,13 +90,13 @@ export class ZeonDB {
 		return ret.getCString();
 	}
 
-	async set(key: string, value: any): boolean {
+	async set(key: string, value: unknown): ZeonResult {
 		const res = await
 		    this.exec(`set ${key} ${JSON.stringify(value)}`);
 		if (res) {
 			return {
 				ok: res,
-				value: JSON.parse(this.get_output()),
+				value: this.get_output(),
 			};
 		}
 
@@ -139,12 +139,16 @@ initZeonDB("../build/libZeonCAPI.so");
 const db = await (new ZeonDB("127.0.0.1", 6748));
 
 if (await db.auth("theo", "paris")) {
-	let res = await db.set('ale."cau lol".xd', "hmm");
+	let res = await db.set('Deno', {
+		je: {
+			super: true
+		}
+	});
 	if (!res.ok) {
 		console.error(res.msg);
 		Deno.exit(1);
 	}
-	res = await db.get("xdawd");
+	res = await db.get("$");
 	if (res.ok) {
 		console.log(res.value);
 	} else {

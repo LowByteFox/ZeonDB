@@ -2,7 +2,7 @@ package main
 
 /*
 #cgo CFLAGS: -I../src/include/client
-#cgo LDFLAGS: -L/usr/local/lib -L../build -lZeonCAPI -lc++abi -lc++ -luv -lssl -lcrypto
+#cgo LDFLAGS: -L/usr/local/lib -L../build/ -l:libZeonCAPI.a -lc++abi -lc++ -luv -lssl -lcrypto
 #include <zeonapi.h>
 */
 import "C"

@@ -22,6 +22,7 @@ std::function<std::vector<TokTy>()> fn_gen(std::string code) {
 		return ret;
 	};
 }
+
 int main() {
 	match(fn_gen("set $ true"),
 	    std::vector<TokTy>({TokTy::identifier, TokTy::dollar, 

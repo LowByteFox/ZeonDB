@@ -1,13 +1,18 @@
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
 #include <utility>
+#include <memory>
+
+#include <zql2/lexer.hpp>
 
 namespace ZeonDB::ZQL {
 	enum class AstType {
 		KeyNode,
 		ValueNode,
+		KeywordNode,
 		CommandNode
 	};
 
@@ -75,7 +80,25 @@ namespace ZeonDB::ZQL {
 				this->type = AstType::CommandNode;
 			}
 
+			~CommandEvalNode() {
+				for (auto& ptr : (*this)) {
+					delete ptr;
+				}
+			}
+
+			void set_cmd_name(std::string);
 			std::string get_cmd_name();
 			std::string stringify() const override;
+	};
+
+	class Parser {
+		private:
+			Lexer lexer;
+			std::string code;
+			CommandValueNode* parse_value(Token&);
+			CommandKeyNode* parse_key(Token&, CommandKeyNode*);
+		public:
+			Parser(std::string text): lexer(text), code(text) {}
+			CommandEvalNode parse();
 	};
 }

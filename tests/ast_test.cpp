@@ -79,16 +79,16 @@ std::string test9() {
 
 std::string test10() {
 	CommandEvalNode enode("set");
-	CommandKeyNode knode;
-	CommandValueNode vnode(ValueTypes::Array);
-	vnode.set_text("[{name: \"Jarred Sumner\"}, {name: \"Dave Caruso\"}]");
+	auto knode = new CommandKeyNode();
+	auto vnode = new CommandValueNode(ValueTypes::Array);
+	vnode->set_text("[{name: \"Jarred Sumner\"}, {name: \"Dave Caruso\"}]");
 
 	KeyNode key("oven");
 	key.set_version("employees");
-	knode.push_back(key);
+	knode->push_back(key);
 
-	enode.push_back(&knode);
-	enode.push_back(&vnode);
+	enode.push_back(knode);
+	enode.push_back(vnode);
 
 	return enode.stringify();
 }

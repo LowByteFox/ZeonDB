@@ -35,6 +35,7 @@ namespace ZeonDB {
 			bool del(ZeonDB::Utils::String);
 			std::shared_ptr<Types::Value> get(ZeonDB::Utils::String);
 			void iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)>);
+			std::vector<ZeonDB::Utils::String> get_versions(ZeonDB::Utils::String);
 
 			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);
 	};

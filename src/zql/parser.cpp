@@ -10,16 +10,21 @@
 
 using ZeonDB::Types::Value;
 
-extern void help(ZeonDB::ZQL::Context *ctx);
-extern void get(ZeonDB::ZQL::Context *ctx);
-extern void del(ZeonDB::ZQL::Context *ctx);
-extern void set(ZeonDB::ZQL::Context *ctx);
-extern void auth(ZeonDB::ZQL::Context *ctx);
-extern void template_cmd(ZeonDB::ZQL::Context *ctx);
-extern void link_cmd(ZeonDB::ZQL::Context *ctx);
+#define EXTRN(N) extern void N(ZeonDB::ZQL::Context *ctx);
+
+EXTRN(help);
+EXTRN(get);
+EXTRN(del);
+EXTRN(set);
+EXTRN(auth);
+EXTRN(template_cmd);
+EXTRN(link_cmd);
+EXTRN(link_cmd);
+EXTRN(versions);
 
 std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
 	{"help", help},
+	{"versions", versions},
 	{"get", get},
 	{"delete", del},
 	{"set", set},

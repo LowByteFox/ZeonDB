@@ -5,7 +5,7 @@
 
 using ZeonDB::Types::Type;
 
-void get_casual(ZeonDB::ZQL::Context* ctx) {
+void get_versions(ZeonDB::ZQL::Context* ctx) {
 	auto key = ctx->get_arg(0);
 
 	std::string user = ctx->get_user();
@@ -34,14 +34,14 @@ void get_casual(ZeonDB::ZQL::Context* ctx) {
 				return;
 			}
 
-			auto val = current->v.c.get(s);
+			auto vers = current->v.c.get_versions(s);
+			auto arr = ZeonDB::Types::Value::new_array();
 
-			if (val == nullptr) {
-				ctx->error = "No such key \"" + key->v.s + "\"!";
-				return;
+			for (const auto& str : vers) {
+				arr->v.a.push_back(ZeonDB::Types::Value::new_string(str));
 			}
 
-			*ctx->temporary_buffer = val;
+			*ctx->temporary_buffer = arr;
 			break;
 		}
 
@@ -70,16 +70,16 @@ void get_casual(ZeonDB::ZQL::Context* ctx) {
 	}
 }
 
-void get(ZeonDB::ZQL::Context* ctx) {
+void versions(ZeonDB::ZQL::Context* ctx) {
 	size_t arg_count = ctx->arg_count();
 	switch (arg_count) {
 		case 1:
-			get_casual(ctx);
+			get_versions(ctx);
 			break;
 		default:
-			ctx->error = R"(help: get (local) <key>
-get <key> -- get value of <key> as local buffer
-get local <key> -- get value of <key> from local buffer as local buffer
+			ctx->error = R"(help: versions (local) <key>
+versions <key> -- get versions of <key>
+versions local <key> -- get versions of <key> from local buffer
 
 key syntax: key@branch(index..range)
 - the ..range is optional)";

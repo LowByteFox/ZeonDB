@@ -30,7 +30,17 @@ namespace ZeonDB {
 			version = key.next("@");
 		}
 
-		this->db[version][new_key] = value;
+		this->db[new_key][version] = value;
+	}
+
+	std::vector<ZeonDB::Utils::String> Collection::get_versions(ZeonDB::Utils::String key) {
+		std::vector<ZeonDB::Utils::String> versions;
+
+		for (const auto& kv : this->db[key]) {
+			versions.push_back(kv.first);
+		}
+
+		return versions;
 	}
 
 	bool Collection::del(ZeonDB::Utils::String key) {
@@ -51,7 +61,7 @@ namespace ZeonDB {
 				pair.second.erase(new_key);
 			}
 		}
-		this->db[version].erase(new_key);
+		this->db[new_key].erase(version);
 
 		return has;
 	}
@@ -65,14 +75,14 @@ namespace ZeonDB {
 			version = key.next("@");
 		}
 
-		if (!this->db[version].contains(new_key)) return nullptr;
+		if (!this->db[new_key].contains(version)) return nullptr;
 
-		return this->db[version][new_key];
+		return this->db[new_key][version];
 	}
 
 	void Collection::iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)> fn) {
-		for (auto& [key, value] : this->db[this->def_ver]) {
-			fn(key, value);
+		for (auto& [key, value] : this->db) {
+			fn(key, value[this->def_ver]);
 		}
 	}
 
@@ -86,7 +96,9 @@ namespace ZeonDB {
 			}
 		}
 
-		for (const auto& [key, value] : this->db[this->def_ver]) {
+		for (auto& [key, value] : this->db) {
+			const auto& val = value[this->def_ver];
+
 			if (this->has_perms(username, key)) {
 				Accounts::Permission perms = this->get_perms(username, key);
 				if (!perms.can_read) {
@@ -105,7 +117,7 @@ namespace ZeonDB {
 			}
 
 			str += " ";
-			str += value->_stringify(fmtType, username, protector);
+			str += val->_stringify(fmtType, username, protector);
 			if (fmtType == Types::FormatType::JSON) {
 				str += ", ";
 			} else {

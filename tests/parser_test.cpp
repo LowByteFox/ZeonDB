@@ -15,7 +15,7 @@ std::string test1() {
 }
 
 std::string test2() {
-	Parser parser("set $.world.ahoj@cau[0].ale[3..4] 0");
+	Parser parser("set $.world.ahoj@cau[0].ale[3..4]. 0");
 
 	auto out = parser.parse();
 	printf("\n%s\n", out.stringify().c_str());
@@ -25,6 +25,6 @@ std::string test2() {
 
 int main() {
 	match(test1, {"set [7,4,{ahoj:cau}]"});
-	match(test2, {"set $.world.ahoj@cau[0].ale[3..4] 0"});
+	match(test2, {"set $.world.ahoj@cau[0].ale[3..4]. 0"});
 	return 0;
 }

@@ -69,7 +69,7 @@ void del(ZeonDB::ZQL::Context* ctx) {
 delete <key> -- delete value at <key>
 delete local <key> -- delete value at key <key> in local buffer
 
-key syntax: key@branch(index..range)
+key syntax: key@branch[index]
 - the ..range is optional)";
 	}
 }

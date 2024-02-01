@@ -81,7 +81,7 @@ void versions(ZeonDB::ZQL::Context* ctx) {
 versions <key> -- get versions of <key>
 versions local <key> -- get versions of <key> from local buffer
 
-key syntax: key@branch(index..range)
-- the ..range is optional)";
+key syntax: key[index]
+)";
 	}
 }

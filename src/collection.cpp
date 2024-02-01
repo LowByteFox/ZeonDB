@@ -26,7 +26,16 @@ namespace ZeonDB {
 		if (key.version.length() == 0) {
 			key.version = this->def_ver;
 		}
-		this->db[key.key][key.version] = value;
+
+		auto val = this->db[key.key][key.version];
+
+		if (val && val->t == Types::Type::Array) {
+			if (key.array_range.first > -1) {
+				val->v.a[key.array_range.first] = value;
+			}
+		} else {
+			this->db[key.key][key.version] = value;
+		}
 	}
 
 	std::vector<ZeonDB::Utils::String> Collection::get_versions(ZeonDB::Utils::Key key) {
@@ -48,9 +57,8 @@ namespace ZeonDB {
 		if (!has) return has;
 
 		if (key.version == this->def_ver) {
-			for (auto& pair: this->db) {
-				LOG_D("VERSION: %s", pair.first.c_str());
-				pair.second.erase(key.key);
+			for (auto& pair: this->db[key.key]) {
+				this->db[key.key].erase(pair.first);
 			}
 		}
 		this->db[key.key].erase(key.version);
@@ -65,7 +73,14 @@ namespace ZeonDB {
 
 		if (!this->db[key.key].contains(key.version)) return nullptr;
 
-		return this->db[key.key][key.version];
+		auto val = this->db[key.key][key.version];
+		if (val->t == Types::Type::Array) {
+			if (key.array_range.first > -1) {
+				val = val->v.a[key.array_range.first];
+			}
+		}
+
+		return val;
 	}
 
 	void Collection::iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)> fn) {

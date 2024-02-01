@@ -7,6 +7,7 @@
 #include <collection.hpp>
 #include <accounts.hpp>
 #include <utils/string.hpp>
+#include <utils/key_processor.hpp>
 
 namespace ZeonDB {
 	void Collection::assign_perm(std::string username, std::string key, Accounts::Permission perms) {
@@ -21,63 +22,50 @@ namespace ZeonDB {
 		return this->perms[username + ":" + key];
 	}
 
-	void Collection::add(ZeonDB::Utils::String key, std::shared_ptr<Types::Value> value) {
-		std::string new_key = key.c_str();
-		std::string version = this->def_ver;
-
-		if (key.contains("@")) {
-			new_key = key.next("@");
-			version = key.next("@");
+	void Collection::add(ZeonDB::Utils::Key key, std::shared_ptr<Types::Value> value) {
+		if (key.version.length() == 0) {
+			key.version = this->def_ver;
 		}
-
-		this->db[new_key][version] = value;
+		this->db[key.key][key.version] = value;
 	}
 
-	std::vector<ZeonDB::Utils::String> Collection::get_versions(ZeonDB::Utils::String key) {
+	std::vector<ZeonDB::Utils::String> Collection::get_versions(ZeonDB::Utils::Key key) {
 		std::vector<ZeonDB::Utils::String> versions;
 
-		for (const auto& kv : this->db[key]) {
+		for (const auto& kv : this->db[key.key]) {
 			versions.push_back(kv.first);
 		}
 
 		return versions;
 	}
 
-	bool Collection::del(ZeonDB::Utils::String key) {
-		std::string new_key = key.c_str();
-		std::string version = this->def_ver;
-
-		if (key.contains("@")) {
-			new_key = key.next("@");
-			version = key.next("@");
+	bool Collection::del(ZeonDB::Utils::Key key) {
+		if (key.version.length() == 0) {
+			key.version = this->def_ver;
 		}
 
-		bool has = this->db[version].contains(new_key);
+		bool has = this->db[key.version].contains(key.key);
 		if (!has) return has;
 
-		if (version == this->def_ver) {
+		if (key.version == this->def_ver) {
 			for (auto& pair: this->db) {
 				LOG_D("VERSION: %s", pair.first.c_str());
-				pair.second.erase(new_key);
+				pair.second.erase(key.key);
 			}
 		}
-		this->db[new_key].erase(version);
+		this->db[key.key].erase(key.version);
 
 		return has;
 	}
 
-	std::shared_ptr<Types::Value> Collection::get(ZeonDB::Utils::String key) {
-		std::string new_key = key.c_str();
-		std::string version = this->def_ver;
-
-		if (key.contains("@")) {
-			new_key = key.next("@");
-			version = key.next("@");
+	std::shared_ptr<Types::Value> Collection::get(ZeonDB::Utils::Key key) {
+		if (key.version.length() == 0) {
+			key.version = this->def_ver;
 		}
 
-		if (!this->db[new_key].contains(version)) return nullptr;
+		if (!this->db[key.key].contains(key.version)) return nullptr;
 
-		return this->db[new_key][version];
+		return this->db[key.key][key.version];
 	}
 
 	void Collection::iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)> fn) {

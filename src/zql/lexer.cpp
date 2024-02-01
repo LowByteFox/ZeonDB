@@ -39,26 +39,26 @@ namespace ZeonDB::ZQL {
 			return;
 		}
 
-        char current = this->read_char();
+		char current = this->read_char();
 
-        while (current != '\n' && current != 0) {
-            current = this->read_char();
-        }
+		while (current != '\n' && current != 0) {
+			current = this->read_char();
+		}
 
-        this->col = 0;
-        this->line += 1;
+		this->col = 0;
+		this->line += 1;
 	}
 
 	Token Lexer::tokenize_identifier() {
 		Token tok;
 		tok.type = TokenTypes::identifier;
 		tok.col = this->pos;
-        tok.line = this->line;
+		tok.line = this->line;
 		char current = this->read_char();
 
-		while (isdigit(current) || isalpha(current) || isdigit(current) ||
-				current == '_' || current == '$' || current == '.' ||
-				current == '@' || current == '(' || current == ')') {
+		while (isdigit(current) || isalpha(current) ||
+				current == '_' || current == '$' || current == ':' ||
+				current == '@' || current == '[' || current == ']') {
 			current = this->read_char();
 		}
 
@@ -136,9 +136,9 @@ namespace ZeonDB::ZQL {
 		if (tok == 0) {
 			return (Token) {
 				.type = TokenTypes::eof,
-				.line = this->line,
-				.col = this->col,
-				.len = 0,
+					.line = this->line,
+					.col = this->col,
+					.len = 0,
 			};
 		}
 
@@ -150,57 +150,57 @@ namespace ZeonDB::ZQL {
 			case ':':
 				return (Token) {
 					.type = TokenTypes::colon,
-					.line = this->line,
-					.col = this->col - 1,
-					.len = 1,
+						.line = this->line,
+						.col = this->col - 1,
+						.len = 1,
 				};
 				break;
 			case ';':
 				return (Token) {
 					.type = TokenTypes::semicolon,
-					.line = this->line,
-					.col = this->col - 1,
-					.len = 1,
+						.line = this->line,
+						.col = this->col - 1,
+						.len = 1,
 				};
 				break;
 			case ',':
 				return (Token) {
 					.type = TokenTypes::comma,
-					.line = this->line,
-					.col = this->col - 1,
-					.len = 1,
+						.line = this->line,
+						.col = this->col - 1,
+						.len = 1,
 				};
 				break;
 			case '[':
 				return (Token) {
 					.type = TokenTypes::lsquarebracket,
-					.line = this->line,
-					.col = this->col - 1,
-					.len = 1,
+						.line = this->line,
+						.col = this->col - 1,
+						.len = 1,
 				};
 				break;
 			case ']':
 				return (Token) {
 					.type = TokenTypes::rsquarebracket,
-					.line = this->line,
-					.col = this->col - 1,
-					.len = 1,
+						.line = this->line,
+						.col = this->col - 1,
+						.len = 1,
 				};
 				break;
 			case '{':
 				return (Token) {
 					.type = TokenTypes::lsquiglybracket,
-					.line = this->line,
-					.col = this->col - 1,
-					.len = 1,
+						.line = this->line,
+						.col = this->col - 1,
+						.len = 1,
 				};
 				break;
 			case '}':
 				return (Token) {
 					.type = TokenTypes::rsquiglybracket,
-					.line = this->line,
-					.col = this->col - 1,
-					.len = 1,
+						.line = this->line,
+						.col = this->col - 1,
+						.len = 1,
 				};
 				break;
 			case '-':
@@ -217,9 +217,9 @@ namespace ZeonDB::ZQL {
 		} else {
 			return (Token) {
 				.type = TokenTypes::illegal,
-				.line = this->line,
-				.col = this->col,
-				.len = 0,
+					.line = this->line,
+					.col = this->col,
+					.len = 0,
 			};
 		}
 	}

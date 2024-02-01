@@ -9,6 +9,7 @@
 
 #include <accounts.hpp>
 #include <utils/string.hpp>
+#include <utils/key_processor.hpp>
 
 namespace ZeonDB {
 	namespace Types {
@@ -31,11 +32,11 @@ namespace ZeonDB {
 			void assign_perm(std::string, std::string, Accounts::Permission);
 			bool has_perms(std::string, std::string);
 			Accounts::Permission get_perms(std::string, std::string);
-			void add(ZeonDB::Utils::String, std::shared_ptr<Types::Value>);
-			bool del(ZeonDB::Utils::String);
-			std::shared_ptr<Types::Value> get(ZeonDB::Utils::String);
+			void add(ZeonDB::Utils::Key, std::shared_ptr<Types::Value>);
+			bool del(ZeonDB::Utils::Key);
+			std::shared_ptr<Types::Value> get(ZeonDB::Utils::Key);
 			void iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)>);
-			std::vector<ZeonDB::Utils::String> get_versions(ZeonDB::Utils::String);
+			std::vector<ZeonDB::Utils::String> get_versions(ZeonDB::Utils::Key);
 
 			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);
 	};

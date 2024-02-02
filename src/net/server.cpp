@@ -23,24 +23,24 @@ void on_connect(uv_stream_t *server, int status) {
 	auto* s = static_cast<ZeonDB::Net::Server*>(server->data);
 
 	uv_tcp_t client;
-	auto* cl = new ZeonDB::Net::Client(s, client);
+	auto* cl = new ZeonDB::Net::Client(s, client, *s->get_options());
 	uv_tcp_init(s->get_loop(), cl->get_client());
 
 	if (uv_accept(server, (uv_stream_t*) cl->get_client()) == 0) {
-        struct sockaddr_storage addr;
-        int len = sizeof(addr);
-        char ip[INET6_ADDRSTRLEN];
-        int port;
+		struct sockaddr_storage addr;
+		int len = sizeof(addr);
+		char ip[INET6_ADDRSTRLEN];
+		int port;
 
-        uv_tcp_getpeername(cl->get_client(), (struct sockaddr*)&addr, &len);
+		uv_tcp_getpeername(cl->get_client(), (struct sockaddr*)&addr, &len);
 
-        if (addr.ss_family == AF_INET) {
-            uv_ip4_name((struct sockaddr_in*)&addr, ip, sizeof(ip));
-            port = ntohs(((struct sockaddr_in*)&addr)->sin_port);
-        } else { 
-            uv_ip6_name((struct sockaddr_in6*)&addr, ip, sizeof(ip));
-            port = ntohs(((struct sockaddr_in6*)&addr)->sin6_port);
-        }
+		if (addr.ss_family == AF_INET) {
+			uv_ip4_name((struct sockaddr_in*)&addr, ip, sizeof(ip));
+			port = ntohs(((struct sockaddr_in*)&addr)->sin_port);
+		} else { 
+			uv_ip6_name((struct sockaddr_in6*)&addr, ip, sizeof(ip));
+			port = ntohs(((struct sockaddr_in6*)&addr)->sin6_port);
+		}
 
 		LOG_I("New client! %s:%d", ip, port);
 
@@ -62,7 +62,7 @@ void alloc_buff(uv_handle_t *handle, size_t _, uv_buf_t *buf) {
 		buf->base = frame->get_buffer() + client->read;
 	}
 
-    buf->base = frame->get_buffer();
+	buf->base = frame->get_buffer();
 	buf->len = 1024;
 }
 
@@ -177,10 +177,11 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 }
 
 namespace ZeonDB::Net {
-	void Server::configure(uint16_t port) {
+	void Server::configure(uint16_t port, std::map<std::string, ZeonDB::Types::ManagedValue> *options) {
 		LOG_I("Configuring the server!", nullptr);
 		uv_ip4_addr("0.0.0.0", port, &this->addr);
 
+		this->options = options;
 
 		this->port = port;
 		this->loop = uv_default_loop();
@@ -213,5 +214,10 @@ namespace ZeonDB::Net {
 		LOG_I("Running on port %d", this->port);
 		uv_run(this->loop, UV_RUN_DEFAULT);
 		LOG_I("Stopping server!", nullptr);
+	}
+
+
+	std::map<std::string, ZeonDB::Types::ManagedValue> *Server::get_options() {
+		return this->options;
 	}
 }

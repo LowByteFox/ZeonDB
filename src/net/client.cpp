@@ -1,4 +1,5 @@
 #include <uv.h>
+#include <types.hpp>
 #include <net/client.hpp>
 #include <net/server.hpp>
 #include <net/frame.hpp>
@@ -12,12 +13,13 @@ void send_msg(uv_write_t *req, int status) {
 }
 
 namespace ZeonDB::Net {
-	Client::Client(Server *server, uv_tcp_t connection) {
+	Client::Client(Server *server, uv_tcp_t connection, std::map<std::string, ZeonDB::Types::ManagedValue> opts) {
 		this->server = server;
 		this->client = connection;
 		this->read = 0;
 		this->buffer = "";
 		this->output = "";
+		this->options = opts;
 	}
 
 	void Client::set_user(std::string login) {
@@ -44,5 +46,9 @@ namespace ZeonDB::Net {
 		uv_write_t* req = new uv_write_t;
 		this->uv_buf = uv_buf_init(this->frame.get_buffer(), 1024);
 		uv_write(req, (uv_stream_t*) &this->client, &this->uv_buf, 1, send_msg);
+	}
+
+	std::map<std::string, ZeonDB::Types::ManagedValue>* Client::get_options() {
+		return &this->options;
 	}
 }

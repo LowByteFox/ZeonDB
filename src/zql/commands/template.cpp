@@ -112,7 +112,7 @@ void create_template(ZeonDB::ZQL::Context* ctx) {
 	auto template_man = ctx->get_template_store();
 	value->v.c.iter([&templat](std::string key, std::shared_ptr<Value> val) {
 			templat.add(key, val); 
-	});
+	}, "default");
 
 	template_man->add(name->v.s, templat);
 }

@@ -34,8 +34,10 @@ namespace ZeonDB {
 			Accounts::Permission get_perms(std::string, std::string);
 			void add(ZeonDB::Utils::Key, std::shared_ptr<Types::Value>);
 			bool del(ZeonDB::Utils::Key);
+			bool has(ZeonDB::Utils::Key);
 			std::shared_ptr<Types::Value> get(ZeonDB::Utils::Key);
-			void iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)>);
+			std::shared_ptr<Types::Value>& get_ref(ZeonDB::Utils::Key);
+			void iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)>, std::string);
 			std::vector<ZeonDB::Utils::String> get_versions(ZeonDB::Utils::Key);
 
 			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);

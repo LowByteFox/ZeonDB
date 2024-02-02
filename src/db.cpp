@@ -36,7 +36,7 @@ namespace ZeonDB {
 			this->conf = Conf::parse_config("");
 		}
 
-		this->server.configure(this->conf.communication.ip.port);
+		this->server.configure(this->conf.communication.ip.port, &this->opts);
 	}
 
 	void DB::add_template(std::string name, Template templ) {

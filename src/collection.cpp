@@ -53,7 +53,7 @@ namespace ZeonDB {
 			key.version = this->def_ver;
 		}
 
-		bool has = this->db[key.version].contains(key.key);
+		bool has = this->db[key.key].contains(key.version);
 		if (!has) return has;
 
 		if (key.version == this->def_ver) {
@@ -61,6 +61,7 @@ namespace ZeonDB {
 				this->db[key.key].erase(pair.first);
 			}
 		}
+
 		this->db[key.key].erase(key.version);
 
 		return has;
@@ -83,9 +84,30 @@ namespace ZeonDB {
 		return val;
 	}
 
-	void Collection::iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)> fn) {
+	bool Collection::has(ZeonDB::Utils::Key key) {
+		if (key.version.length() == 0) {
+			key.version = this->def_ver;
+		}
+
+		return this->db[key.key].contains(key.version);
+	}
+
+	std::shared_ptr<Types::Value>& Collection::get_ref(ZeonDB::Utils::Key key) {
+		if (key.version.length() == 0) {
+			key.version = this->def_ver;
+		}
+
+		if (!this->db[key.key].contains(key.version)) {
+			LOG_E("The key %s does not exist! Stopping to prevent undefined behavior!", key.key.c_str());
+			abort();
+		}
+
+		return this->db[key.key][key.version];
+	}
+
+	void Collection::iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)> fn, std::string version) {
 		for (auto& [key, value] : this->db) {
-			fn(key, value[this->def_ver]);
+			fn(key, value[version]);
 		}
 	}
 

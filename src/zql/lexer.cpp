@@ -57,8 +57,9 @@ namespace ZeonDB::ZQL {
 		char current = this->read_char();
 
 		while (isdigit(current) || isalpha(current) ||
-				current == '_' || current == '$' || current == ':' ||
-				current == '@' || current == '[' || current == ']') {
+				current == '_' || current == '$' ||
+				current == '@' || current == '[' || current == ']' ||
+				current == '.') {
 			current = this->read_char();
 		}
 
@@ -215,6 +216,7 @@ namespace ZeonDB::ZQL {
 			this->step_back(1);
 			return this->tokenize_number();
 		} else {
+			LOG_W("Encountered %c!", tok);
 			return (Token) {
 				.type = TokenTypes::illegal,
 					.line = this->line,

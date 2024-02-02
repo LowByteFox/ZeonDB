@@ -28,6 +28,7 @@ namespace ZeonDB::ZQL {
 
 		private:
 			std::shared_ptr<ZeonDB::Types::Value> db;
+			std::map<std::string, ZeonDB::Types::ManagedValue>* options;
 			ZeonDB::Accounts::AccountManager *amgr;
 			ZeonDB::TemplateStore *templ_store;
 
@@ -41,6 +42,8 @@ namespace ZeonDB::ZQL {
 
 			Context(std::shared_ptr<ZeonDB::Types::Value> collection) : db(collection) {}
 			Context(std::shared_ptr<ZeonDB::Types::Value> collection, std::string err) : db(collection), error(err) {}
+			void set_options(std::map<std::string, ZeonDB::Types::ManagedValue>*);
+			std::map<std::string, ZeonDB::Types::ManagedValue>* get_options();
 			ZeonDB::Accounts::AccountManager *get_account_manager();
 			ZeonDB::TemplateStore *get_template_store();
 			void set_user(std::string);

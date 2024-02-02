@@ -11,6 +11,7 @@
 using ZeonDB::Types::Value;
 
 #define EXTRN(N) extern void N(ZeonDB::ZQL::Context *ctx);
+#define FN(N) {#N, N}
 
 EXTRN(help);
 EXTRN(get);
@@ -20,17 +21,19 @@ EXTRN(auth);
 EXTRN(template_cmd);
 EXTRN(link_cmd);
 EXTRN(link_cmd);
-EXTRN(versions);
+EXTRN(branches);
+EXTRN(options);
 
 std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
-	{"help", help},
-	{"versions", versions},
-	{"get", get},
+	FN(help),
+	FN(branches),
+	FN(get),
 	{"delete", del},
-	{"set", set},
-	{"auth", auth},
+	FN(set),
+	FN(auth),
 	{"template", template_cmd},
 	{"link", link_cmd},
+	FN(options),
 };
 
 namespace ZeonDB::ZQL {

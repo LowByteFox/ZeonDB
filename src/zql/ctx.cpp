@@ -23,6 +23,14 @@ namespace ZeonDB::ZQL {
 		return this->args[index].value;
 	}
 
+	void Context::set_options(std::map<std::string, ZeonDB::Types::ManagedValue>* opts) {
+		this->options = opts;
+	}
+
+	std::map<std::string, ZeonDB::Types::ManagedValue>* Context::get_options() {
+		return this->options;
+	}
+
 	ZeonDB::Accounts::AccountManager* Context::get_account_manager() {
 		return this->amgr;
 	}

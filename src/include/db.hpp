@@ -24,6 +24,7 @@ namespace ZeonDB {
 			Accounts::AccountManager accs;
 			ZeonDB::Net::Server server;
 			TemplateStore templates;
+			std::map<std::string, ZeonDB::Types::ManagedValue> opts;
 
 		public:
 			DB();

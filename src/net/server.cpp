@@ -128,7 +128,14 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 					client->send_message();
 				} else if (trace.value != nullptr) {
 					LOG_V("Execution ended with a Value!", nullptr);
-					std::string res = trace.value->stringify(FormatType::JSON, client->get_user());
+					FormatType fmtType = FormatType::JSON;
+					if (client->has_opts()) {
+						auto opts = client->get_opts();
+						if ((*opts)["format"].v.s.compare("ZQL") == 0) {
+							fmtType = FormatType::ZQL;
+						}
+					}
+					std::string res = trace.value->stringify(fmtType, client->get_user());
 					memcpy(msg.data(), res.data(), res.length());
 					frame->to_buffer(ZeonFrameStatus::Command, res.length());
 					frame->write_buffer(msg);

@@ -43,7 +43,12 @@ namespace ZeonDB {
 			.t = ZeonDB::Types::Type::String
 		};
 
-		this->opts["merge_mode"].v.s = "overwrite";
+		this->opts["format"] = (Value) {
+			.t = ZeonDB::Types::Type::String
+		};
+
+		this->opts["format"].v.s = this->conf.format;
+		this->opts["merge_mode"].v.s = this->conf.branch.merge_mode;
 
 		this->server.configure(this->conf.communication.ip.port);
 	}

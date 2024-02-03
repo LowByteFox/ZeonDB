@@ -29,7 +29,24 @@ void set_opt(ZeonDB::ZQL::Context* ctx) {
 	auto opts = ctx->get_options();
 	auto key = ctx->get_arg(1);
 
+	if (!opts->contains(key->v.s)) {
+		ctx->error = "No such option " + key->v.s + "!";
+		return;
+	}
+
 	(*opts)[key->v.s] = *ctx->get_arg(2);
+}
+
+void get_opt(ZeonDB::ZQL::Context* ctx) {
+	auto opts = ctx->get_options();
+	auto key = ctx->get_arg(1);
+
+	if (!opts->contains(key->v.s)) {
+		ctx->error = "No such option " + key->v.s + "!";
+		return;
+	}
+
+	*ctx->temporary_buffer = std::make_shared<Value>((*opts)[key->v.s]);
 }
 
 void options(ZeonDB::ZQL::Context* ctx) {
@@ -40,6 +57,16 @@ void options(ZeonDB::ZQL::Context* ctx) {
 			auto subcmd = ctx->get_arg(0);
 			if (subcmd->v.s.compare("print") == 0) {
 				print_opts(ctx);
+			}  else {
+				ctx->error = HELP_MSG;
+			}
+			break;
+		}
+		case 2:
+		{
+			auto subcmd = ctx->get_arg(0);
+			if (subcmd->v.s.compare("get") == 0) {
+				get_opt(ctx);
 			}  else {
 				ctx->error = HELP_MSG;
 			}

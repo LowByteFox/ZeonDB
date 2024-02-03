@@ -8,12 +8,14 @@
 #include <types.hpp>
 #include <zql/ctx.hpp>
 #include <net/server.hpp>
+#include <net/client.hpp>
 #include <templates.hpp>
 
 #include <openssl/sha.h>
 
 namespace ZeonDB::Net {
 	class Server;
+	class Client;
 }
 
 namespace ZeonDB {
@@ -24,7 +26,7 @@ namespace ZeonDB {
 			Accounts::AccountManager accs;
 			ZeonDB::Net::Server server;
 			TemplateStore templates;
-			std::map<std::string, ZeonDB::Types::ManagedValue> opts;
+			std::map<std::string, ZeonDB::Types::Value> opts;
 
 		public:
 			DB();
@@ -32,7 +34,7 @@ namespace ZeonDB {
 			void add_template(std::string, Template);
 			bool login(std::string, unsigned char[SHA256_DIGEST_LENGTH]);
 			void assign_perm(std::string, std::string, Accounts::Permission);
-			ZQL::ZqlTrace execute(std::string, std::string);
+			ZQL::ZqlTrace execute(std::string, std::string, ZeonDB::Net::Client*);
 			void run();
 	};
 }

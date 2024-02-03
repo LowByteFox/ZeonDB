@@ -23,11 +23,11 @@ namespace ZeonDB::ZQL {
 		return this->args[index].value;
 	}
 
-	void Context::set_options(std::map<std::string, ZeonDB::Types::ManagedValue>* opts) {
+	void Context::set_options(std::map<std::string, ZeonDB::Types::Value>* opts) {
 		this->options = opts;
 	}
 
-	std::map<std::string, ZeonDB::Types::ManagedValue>* Context::get_options() {
+	std::map<std::string, ZeonDB::Types::Value>* Context::get_options() {
 		return this->options;
 	}
 

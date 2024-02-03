@@ -37,6 +37,10 @@ if(NOT SSL_FOUND)
     pkg_check_modules(SSL openssl REQUIRED)
 endif()
 
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Debug)
+endif()
+
 pkg_check_modules(UV libuv REQUIRED)
 
 include(FetchContent)
@@ -60,6 +64,10 @@ include_directories(${SSL_INCLUDE_DIRS} ${UV_INCLUDE_DIRS})
 link_directories(${SSL_LIBRARY_DIRS} ${UV_LIBRARY_DIRS})
 link_libraries(${SSL_LIBRARIES} ${UV_LIBRARIES})
 add_compile_options(${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
+
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+	add_compile_options(-g)
+endif()
 
 file(GLOB_RECURSE ZEONDB_SOURCES "src/*.cpp")
 list(FILTER ZEONDB_SOURCES EXCLUDE REGEX "src/client/.*")

@@ -23,7 +23,7 @@ void on_connect(uv_stream_t *server, int status) {
 	auto* s = static_cast<ZeonDB::Net::Server*>(server->data);
 
 	uv_tcp_t client;
-	auto* cl = new ZeonDB::Net::Client(s, client, *s->get_options());
+	auto* cl = new ZeonDB::Net::Client(s, client);
 	uv_tcp_init(s->get_loop(), cl->get_client());
 
 	if (uv_accept(server, (uv_stream_t*) cl->get_client()) == 0) {
@@ -117,7 +117,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 				LOG_D("Command: %s", client->buffer.c_str());
 
 				LOG_V("Executing!", nullptr);
-				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer, client->get_user());
+				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer, client->get_user(), client);
 
 				if (trace.error.length() > 0) {
 					LOG_V("Execution ended with an Error!", nullptr);
@@ -177,11 +177,9 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 }
 
 namespace ZeonDB::Net {
-	void Server::configure(uint16_t port, std::map<std::string, ZeonDB::Types::ManagedValue> *options) {
+	void Server::configure(uint16_t port) {
 		LOG_I("Configuring the server!", nullptr);
 		uv_ip4_addr("0.0.0.0", port, &this->addr);
-
-		this->options = options;
 
 		this->port = port;
 		this->loop = uv_default_loop();
@@ -204,8 +202,8 @@ namespace ZeonDB::Net {
 
 		int res = uv_listen((uv_stream_t*)&server, 128, on_connect);
 
-		if (res > 0) {
-			LOG_E("Listen error: %s\n", uv_strerror(res));
+		if (res != 0) {
+			LOG_E("Listen error: %s", uv_strerror(res));
 			return;
 		}
 
@@ -214,10 +212,5 @@ namespace ZeonDB::Net {
 		LOG_I("Running on port %d", this->port);
 		uv_run(this->loop, UV_RUN_DEFAULT);
 		LOG_I("Stopping server!", nullptr);
-	}
-
-
-	std::map<std::string, ZeonDB::Types::ManagedValue> *Server::get_options() {
-		return this->options;
 	}
 }

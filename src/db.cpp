@@ -5,6 +5,7 @@
 #include <zql/parser.hpp>
 #include <zql/ctx.hpp>
 #include <net/server.hpp>
+#include <net/client.hpp>
 
 #include <memory>
 #include <string>
@@ -12,6 +13,8 @@
 #include <filesystem>
 
 #include <openssl/sha.h>
+
+using ZeonDB::Types::Value;
 
 namespace ZeonDB {
 	DB::DB() {
@@ -36,7 +39,13 @@ namespace ZeonDB {
 			this->conf = Conf::parse_config("");
 		}
 
-		this->server.configure(this->conf.communication.ip.port, &this->opts);
+		this->opts["merge_mode"] = (Value) {
+			.t = ZeonDB::Types::Type::String
+		};
+
+		this->opts["merge_mode"].v.s = "overwrite";
+
+		this->server.configure(this->conf.communication.ip.port);
 	}
 
 	void DB::add_template(std::string name, Template templ) {
@@ -60,17 +69,21 @@ namespace ZeonDB {
 		this->server.serve(this);
 	}
 
-	ZQL::ZqlTrace DB::execute(std::string script, std::string username) {
+	ZQL::ZqlTrace DB::execute(std::string script, std::string username, ZeonDB::Net::Client *c) {
 		ZQL::Parser parser(this->db, script);
 		std::vector<ZQL::Context> ctxs = parser.parse();
 
 		std::shared_ptr<ZeonDB::Types::Value> tmp_buffer;
 
+		if (!c->has_opts()) {
+			c->set_opts(&this->opts);
+		}
 
 		for (auto& ctx : ctxs) {
 			ctx.amgr = &this->accs;
 			ctx.templ_store = &this->templates;
 			ctx.set_user(username);
+			ctx.set_options(c->get_opts());
 			if (ctx.error.length() > 0) {
 				return (ZQL::ZqlTrace) {
 					.value = nullptr,

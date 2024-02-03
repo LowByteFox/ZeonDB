@@ -15,8 +15,9 @@ namespace ZeonDB {
 		return this->target;
 	}
 
-	void Link::set_root(std::shared_ptr<Types::Value> root) {
+	void Link::set_root(std::shared_ptr<Types::Value> root, std::string path) {
 		this->root = root;
+		this->root_path = path;
 	}
 
 	std::shared_ptr<Types::Value> Link::follow(std::string user, Types::RecursionProtector* protector) {

@@ -28,6 +28,7 @@ void link_data(ZeonDB::ZQL::Context* ctx) {
 
 	auto current = ctx->get_db();
 	std::string s = "";
+	std::string root_path = "";
 	while ((s = from->v.s.next(".")).length() > 0) {
 		if (!from->v.s.peek(".")) {
 			if (current->v.c.has_perms(user, s)) {
@@ -40,11 +41,12 @@ void link_data(ZeonDB::ZQL::Context* ctx) {
 			}
 
 			auto lnk = Value::new_link(to->v.s);
-			lnk->v.l.set_root(ctx->get_db());
+			root_path.pop_back();
+			lnk->v.l.set_root(ctx->get_db(), "");
 
 			if (to->v.s.length() > 2 && to->v.s[0] == '$' && to->v.s[1] == '.') {
 				lnk->v.l.set_target(to->v.s.substr(2));
-				lnk->v.l.set_root(current);
+				lnk->v.l.set_root(current, root_path);
 			}
 
 			current->v.c.add(s, lnk);
@@ -66,6 +68,8 @@ void link_data(ZeonDB::ZQL::Context* ctx) {
 				ctx->error = "Collection expected at key " + s;
 				return;
 			}
+
+			root_path += s + ".";
 
 			current = val;
 			continue;

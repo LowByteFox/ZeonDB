@@ -12,6 +12,7 @@
 #include <types.hpp>
 #include <templates.hpp>
 #include <openssl/sha.h>
+#include <serializator.hpp>
 #include <argparse/argparse.hpp>
 
 #include <uv.h>
@@ -44,6 +45,12 @@ void version() {
 	exit(0);
 }
 
+ZeonDB::Serializer serializer(".zeondb-dat");
+
+void signal_handler(uv_signal_t *handle, int _) {
+    uv_stop(uv_default_loop());
+}
+
 int main(int argc, char **argv) {
 	argparse::ArgumentParser program("ZeonDB", ZEON_VERSION, argparse::default_arguments::help);
 
@@ -60,6 +67,10 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%s\n", err.what());
 		std::exit(1);
 	}
+
+	uv_signal_t sigint;
+	uv_signal_init(uv_default_loop(), &sigint);
+	uv_signal_start(&sigint, signal_handler, SIGINT);
 	
 	ZeonDB::DB db;
 

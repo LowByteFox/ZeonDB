@@ -18,12 +18,13 @@ namespace ZeonDB {
 	class Link {
 		private:
 			ZeonDB::Utils::String target;
+			ZeonDB::Utils::String root_path;
 			std::shared_ptr<Types::Value> root;
 
 		public:
 			void set_target(std::string);
 			std::string get_target();
-			void set_root(std::shared_ptr<Types::Value>);
+			void set_root(std::shared_ptr<Types::Value>, std::string);
 
 			std::shared_ptr<Types::Value> follow(std::string user, Types::RecursionProtector*);
 	};

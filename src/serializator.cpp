@@ -1,5 +1,7 @@
 #include <serializator.hpp>
 
+#include <db.hpp>
+
 #include <string>
 #include <filesystem>
 
@@ -25,7 +27,10 @@ namespace ZeonDB {
 	}
 
 	Serializer::~Serializer() {
-		this->data_file.write("hey", 4);
 		this->data_file.close();
+	}
+
+	void Serializer::serialize(ZeonDB::DB& db) {
+		db.serialize(this->data_file);
 	}
 }

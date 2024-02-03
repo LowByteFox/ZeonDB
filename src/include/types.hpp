@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <fstream>
 
 #include <link.hpp>
 #include <utils/string.hpp>
@@ -17,7 +18,7 @@ namespace ZeonDB::Types {
 	};
 
 	enum class Type {
-		Array,
+		Array = 0,
 		String,
 		Int,
 		Float,
@@ -53,6 +54,9 @@ namespace ZeonDB::Types {
 		std::string stringify(FormatType fmtType, std::string);
 		std::string _stringify(FormatType fmtType, std::string, RecursionProtector*);
 		std::string _stringify_array(FormatType, std::string, RecursionProtector*);
+
+		void serialize(std::fstream&);
+		void serialize_array(std::fstream&);
 	};
 
 	using ManagedValue = std::shared_ptr<Value>;

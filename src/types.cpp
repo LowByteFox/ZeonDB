@@ -2,6 +2,8 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <cstdint>
 
 #include <types.hpp>
 #include <collection.hpp>
@@ -112,9 +114,48 @@ namespace ZeonDB::Types {
 				protector->pop_back();
 				return str;
 			}
-			default:
-				break;
 		}
 		return "??";
+	}
+
+
+	void Value::serialize_array(std::fstream& stream) {
+		size_t len = this->v.a.size();
+		stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+
+		for (const auto& item : this->v.a) {
+			stream.write(reinterpret_cast<char*>(&item->t), sizeof(Type));
+			item->serialize(stream);
+		}
+	}
+
+	void Value::serialize(std::fstream& stream) {
+		switch (this->t) {
+			case Type::String:
+			{
+				size_t len = this->v.s.length();
+				stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+				stream.write(this->v.s.data(), this->v.s.length());
+				break;
+			}
+			case Type::Int:
+				stream.write(reinterpret_cast<char*>(&this->v.i), sizeof(int64_t));
+				break;
+			case Type::Float:
+				stream.write(reinterpret_cast<char*>(&this->v.f), sizeof(double));
+				break;
+			case Type::Bool:
+				stream.write(reinterpret_cast<char*>(&this->v.b), sizeof(bool));
+				break;
+			case Type::Array:
+				this->serialize_array(stream);
+				break;
+			case Type::Link:
+				this->v.l.serialize(stream);
+				break;
+			case Type::Collection:
+				this->v.c.serialize(stream);
+				break;
+		}
 	}
 }

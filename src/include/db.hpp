@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <fstream>
 
 #include <accounts.hpp>
 #include <config.hpp>
@@ -36,5 +37,6 @@ namespace ZeonDB {
 			void assign_perm(std::string, std::string, Accounts::Permission);
 			ZQL::ZqlTrace execute(std::string, std::string, ZeonDB::Net::Client*);
 			void run();
+			void serialize(std::fstream&);
 	};
 }

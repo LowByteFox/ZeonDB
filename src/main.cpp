@@ -100,6 +100,9 @@ int main(int argc, char **argv) {
 	db.add_template("cau", templ);
 
 	db.run();
+
+	serializer.serialize(db);
+	LOG_I("ZeonDB is saving data to the disk!", nullptr);
 	LOG_I("ZeonDB end!", nullptr);
 	return 0;
 }

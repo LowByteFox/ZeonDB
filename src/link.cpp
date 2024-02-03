@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <memory>
+#include <fstream>
 #include <types.hpp>
 
 namespace ZeonDB {
@@ -62,5 +63,18 @@ namespace ZeonDB {
 		}
 		this->target.reset_iter();
 		return nullptr;
+	}
+
+	void Link::serialize(std::fstream& stream) {
+		size_t len = this->root_path.length();
+		stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+
+		if (len > 0) {
+			stream.write(this->root_path.data(), len);
+		}
+
+		len = this->target.length();
+		stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+		stream.write(this->target.data(), this->target.length());
 	}
 }

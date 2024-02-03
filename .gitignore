@@ -7,6 +7,7 @@ webview/webview
 ZeonUI/ZeonUI
 ZeonUI/litegraph.js
 ZeonUI/litegraph.css
+.zeondb-dat*
 
 # OpenBSD
 *.core

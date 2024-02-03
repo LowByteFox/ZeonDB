@@ -6,6 +6,7 @@
 #include <wy.hpp>
 #include <memory>
 #include <functional>
+#include <fstream>
 
 #include <accounts.hpp>
 #include <utils/string.hpp>
@@ -41,5 +42,6 @@ namespace ZeonDB {
 			std::vector<ZeonDB::Utils::String> get_versions(ZeonDB::Utils::Key);
 
 			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);
+			void serialize(std::fstream&);
 	};
 }

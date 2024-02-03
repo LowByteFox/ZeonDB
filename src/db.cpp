@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <fstream>
 
 #include <openssl/sha.h>
 
@@ -110,5 +111,9 @@ namespace ZeonDB {
 			.value = tmp_buffer,
 			.error = "",
 		};
+	}
+
+	void DB::serialize(std::fstream& stream) {
+		this->db->serialize(stream);
 	}
 }

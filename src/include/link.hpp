@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <fstream>
 #include <utils/string.hpp>
 
 namespace ZeonDB {
@@ -27,5 +28,6 @@ namespace ZeonDB {
 			void set_root(std::shared_ptr<Types::Value>, std::string);
 
 			std::shared_ptr<Types::Value> follow(std::string user, Types::RecursionProtector*);
+			void serialize(std::fstream&);
 	};
 }

@@ -1,5 +1,6 @@
 #include <map>
 #include <string>
+#include <fstream>
 #include <functional>
 
 #include <logger.hpp>
@@ -161,5 +162,18 @@ namespace ZeonDB {
 		}
 
 		return str;
+	}
+
+	void Collection::serialize(std::fstream& stream) {
+		size_t len = this->db.size();
+		stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+
+		for (auto& [key, value] : this->db) {
+			len = key.length();
+			stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+			stream.write(key.data(), key.length());
+			stream.write(reinterpret_cast<char*>(&(value[this->def_ver]->t)), sizeof(ZeonDB::Types::Type));
+			value[this->def_ver]->serialize(stream);
+		}
 	}
 }

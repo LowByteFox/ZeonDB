@@ -11,7 +11,6 @@ namespace ZeonDB::Conf {
 enable = false
 
 [branch]
-default = "main"
 merge_mode = "overwrite"
 
 [accounts]
@@ -56,10 +55,8 @@ port = 6748)";
 		if (table.contains("branch")) {
 			const auto& branch = table["branch"].ref<toml::table>();
 
-			conf.branch.default_name = branch["default"].value_or("main");
 			conf.branch.merge_mode = branch["merge_mode"].value_or("overwrite");
 		} else {
-			conf.branch.default_name = "main";
 			conf.branch.merge_mode = "overwrite";
 		}
 

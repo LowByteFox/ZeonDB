@@ -14,8 +14,7 @@ namespace ZeonDB::Conf {
 			std::string filename; // name of the archive ( prefix if not bundle )
 		} persistence;
 		struct {
-			std::string default_name; // name of the default branch
-			std::string merge_mode; // no_overwrite | overwrite | swap
+			std::string merge_mode; // no_overwrite | overwrite | overwrite_partial | swap
 		} branch;
 		struct {
 			std::string default_name; // name of the default account

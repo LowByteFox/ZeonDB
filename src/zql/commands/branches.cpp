@@ -4,6 +4,7 @@
 #include <zql/ctx.hpp>
 
 using ZeonDB::Types::Type;
+using ZeonDB::Types::ManagedValue;
 
 const static std::string HELP_MSG=R"(help: branches (subcommand)
 branches get <key> -- get versions of <key>
@@ -74,14 +75,30 @@ void merge_branches(ZeonDB::ZQL::Context* ctx) {
 
 			auto opts = ctx->get_options();
 
+			auto& target = current->v.c.get_ref(s_t);
+			auto& from = current->v.c.get_ref(s_f);
 			std::string mode = (*opts)["merge_mode"].v.s;
 
 			if (mode.compare("swap") == 0) {
-				auto& target = current->v.c.get_ref(s_t);
-				auto& from = current->v.c.get_ref(s_f);
 				target.swap(from);
 			} else if (mode.compare("overwrite") == 0) {
 				current->v.c.add(s_t, current->v.c.get(s_f));
+				current->v.c.del(s_f);
+			} else if (mode.compare("overwrite_partial") == 0) {
+				if (target->t != Type::Collection) {
+					ctx->error = "Value at branch " + v_from->v.s + " is not a collection!";
+					return;
+				}
+
+				if (from->t != Type::Collection) {
+					ctx->error = "Value at branch " + v_from->v.s + " is not a collection!";
+					return;
+				}
+
+				from->v.c.iter([&target](ZeonDB::Utils::String k, ManagedValue v) {
+					target->v.c.add(k, v);
+				}, "default");
+
 				current->v.c.del(s_f);
 			}
 			break;

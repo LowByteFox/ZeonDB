@@ -72,9 +72,18 @@ void merge_branches(ZeonDB::ZQL::Context* ctx) {
 				return;
 			}
 
-			auto& target = current->v.c.get_ref(s_t);
-			auto& from = current->v.c.get_ref(s_f);
-			target.swap(from);
+			auto opts = ctx->get_options();
+
+			std::string mode = (*opts)["merge_mode"].v.s;
+
+			if (mode.compare("swap") == 0) {
+				auto& target = current->v.c.get_ref(s_t);
+				auto& from = current->v.c.get_ref(s_f);
+				target.swap(from);
+			} else if (mode.compare("overwrite") == 0) {
+				current->v.c.add(s_t, current->v.c.get(s_f));
+				current->v.c.del(s_f);
+			}
 			break;
 		}
 

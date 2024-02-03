@@ -100,6 +100,25 @@ void merge_branches(ZeonDB::ZQL::Context* ctx) {
 				}, "default");
 
 				current->v.c.del(s_f);
+			} else if (mode.compare("no_overwrite") == 0) {
+				if (target->t != Type::Collection) {
+					ctx->error = "Value at branch " + v_from->v.s + " is not a collection!";
+					return;
+				}
+
+				if (from->t != Type::Collection) {
+					ctx->error = "Value at branch " + v_from->v.s + " is not a collection!";
+					return;
+				}
+
+				from->v.c.iter([&target](ZeonDB::Utils::String k, ManagedValue v) {
+					auto val = target->v.c.get(k);
+					if (val == nullptr) {
+						target->v.c.add(k, v);
+					}
+				}, "default");
+			} else {
+				ctx->error = "No such merge mode " + mode + "!";
 			}
 			break;
 		}

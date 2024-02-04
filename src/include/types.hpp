@@ -11,6 +11,10 @@
 #include <utils/string.hpp>
 #include <collection.hpp>
 
+namespace ZeonDB {
+	struct SerializationContext;
+}
+
 namespace ZeonDB::Types {
 	enum class FormatType {
 		ZQL,
@@ -57,6 +61,9 @@ namespace ZeonDB::Types {
 
 		void serialize(std::fstream&);
 		void serialize_array(std::fstream&);
+
+		void unserialize(ZeonDB::SerializationContext);
+		void unserialize_array(ZeonDB::SerializationContext);
 	};
 
 	using ManagedValue = std::shared_ptr<Value>;

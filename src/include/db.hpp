@@ -38,5 +38,6 @@ namespace ZeonDB {
 			ZQL::ZqlTrace execute(std::string, std::string, ZeonDB::Net::Client*);
 			void run();
 			void serialize(std::fstream&);
+			void unserialize(std::fstream&);
 	};
 }

@@ -9,6 +9,7 @@
 #include <accounts.hpp>
 #include <utils/string.hpp>
 #include <utils/key_processor.hpp>
+#include <serializator.hpp>
 
 namespace ZeonDB {
 	void Collection::assign_perm(std::string username, std::string key, Accounts::Permission perms) {
@@ -174,6 +175,25 @@ namespace ZeonDB {
 			stream.write(key.data(), key.length());
 			stream.write(reinterpret_cast<char*>(&(value[this->def_ver]->t)), sizeof(ZeonDB::Types::Type));
 			value[this->def_ver]->serialize(stream);
+		}
+	}
+
+	void Collection::unserialize(SerializationContext ctx) {
+		size_t count = 0;
+		ctx.stream.read(reinterpret_cast<char*>(&count), sizeof(size_t));
+
+		LOG_I("Count %d", count);
+		for (int i = 0; i < count; i++) {
+			auto obj = std::make_shared<ZeonDB::Types::Value>();
+			size_t len = 0;
+			ctx.stream.read(reinterpret_cast<char*>(&len), sizeof(size_t));
+			std::string key(len, 0);
+			ctx.stream.read(key.data(), len);
+			ctx.stream.read(reinterpret_cast<char*>(&obj->t), sizeof(ZeonDB::Types::Type));
+
+			obj->unserialize(ctx);
+
+			this->add(key, obj);
 		}
 	}
 }

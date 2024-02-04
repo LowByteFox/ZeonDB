@@ -7,6 +7,7 @@
 
 #include <types.hpp>
 #include <collection.hpp>
+#include <serializator.hpp>
 
 namespace ZeonDB::Types {
 	std::shared_ptr<Value> Value::new_array() {
@@ -155,6 +156,49 @@ namespace ZeonDB::Types {
 				break;
 			case Type::Collection:
 				this->v.c.serialize(stream);
+				break;
+		}
+	}
+
+	void Value::unserialize_array(SerializationContext ctx) {
+		size_t len = 0;
+		ctx.stream.read(reinterpret_cast<char*>(&len), sizeof(size_t));
+
+		for (int i = 0; i < len; i++) {
+			auto obj = std::make_shared<Value>();
+			ctx.stream.read(reinterpret_cast<char*>(&obj->t), sizeof(Type));
+			obj->unserialize(ctx);
+			this->v.a.push_back(obj);
+		}
+	}
+
+	void Value::unserialize(SerializationContext ctx) {
+		switch (this->t) {
+			case Type::String:
+			{
+				size_t len = 0;
+				ctx.stream.read(reinterpret_cast<char*>(&len), sizeof(size_t));
+				this->v.s = std::string(len, 0);
+				ctx.stream.read(this->v.s.data(), len);
+				break;
+			}
+			case Type::Int:
+				ctx.stream.read(reinterpret_cast<char*>(&this->v.i), sizeof(int64_t));
+				break;
+			case Type::Float:
+				ctx.stream.read(reinterpret_cast<char*>(&this->v.f), sizeof(double));
+				break;
+			case Type::Bool:
+				ctx.stream.read(reinterpret_cast<char*>(&this->v.b), sizeof(bool));
+				break;
+			case Type::Array:
+				this->unserialize_array(ctx);
+				break;
+			case Type::Link:
+				this->v.l.unserialize(ctx);
+				break;
+			case Type::Collection:
+				this->v.c.unserialize(ctx);
 				break;
 		}
 	}

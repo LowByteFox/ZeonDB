@@ -13,6 +13,8 @@
 #include <utils/key_processor.hpp>
 
 namespace ZeonDB {
+	struct SerializationContext;
+
 	namespace Types {
 		enum class FormatType;
 
@@ -43,5 +45,7 @@ namespace ZeonDB {
 
 			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);
 			void serialize(std::fstream&);
+
+			void unserialize(SerializationContext);
 	};
 }

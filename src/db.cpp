@@ -13,6 +13,8 @@
 #include <filesystem>
 #include <fstream>
 
+#include <serializator.hpp>
+
 #include <openssl/sha.h>
 
 using ZeonDB::Types::Value;
@@ -115,5 +117,14 @@ namespace ZeonDB {
 
 	void DB::serialize(std::fstream& stream) {
 		this->db->serialize(stream);
+	}
+
+	void DB::unserialize(std::fstream& stream) {
+		SerializationContext ctx{
+			.root = this->db,
+			.stream = stream
+		};
+
+		this->db->v.c.unserialize(ctx);
 	}
 }

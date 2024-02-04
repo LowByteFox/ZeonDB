@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
 	uv_signal_start(&sigint, signal_handler, SIGINT);
 	
 	ZeonDB::DB db;
+	serializer.unserialize(db);
 
 	unsigned char out[SHA256_DIGEST_LENGTH];
 

@@ -6,7 +6,11 @@
 #include <fstream>
 #include <utils/string.hpp>
 
+#include <uv.h>
+
 namespace ZeonDB {
+	struct SerializationContext;
+
 	namespace Types {
 		enum class FormatType;
 
@@ -29,5 +33,9 @@ namespace ZeonDB {
 
 			std::shared_ptr<Types::Value> follow(std::string user, Types::RecursionProtector*);
 			void serialize(std::fstream&);
+
+			void unserialize(SerializationContext);
+
+			friend void configure_link(uv_idle_t*);
 	};
 }

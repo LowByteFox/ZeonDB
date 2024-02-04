@@ -127,4 +127,17 @@ namespace ZeonDB {
 
 		this->db->v.c.unserialize(ctx);
 	}
+
+	void DB::serialize_accounts(std::fstream& stream) {
+		this->accs.serialize(stream);
+	}
+
+	void DB::unserialize_accounts(std::fstream& stream) {
+		SerializationContext ctx{
+			.root = this->db,
+			.stream = stream
+		};
+
+		this->accs.unserialize(ctx);
+	}
 }

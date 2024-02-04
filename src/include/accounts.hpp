@@ -2,8 +2,13 @@
 
 #include <string>
 #include <map>
+#include <fstream>
 
 #include <openssl/sha.h>
+
+namespace ZeonDB {
+	struct SerializationContext;
+}
 
 namespace ZeonDB::Accounts {
 	struct Permission {
@@ -23,5 +28,7 @@ namespace ZeonDB::Accounts {
 		public:
 			void register_account(std::string, Account);
 			bool login(std::string, unsigned char[SHA256_DIGEST_LENGTH]);
+			void serialize(std::fstream&);
+			void unserialize(SerializationContext);
 	};
 }

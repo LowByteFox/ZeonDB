@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 
 	unsigned char out[SHA256_DIGEST_LENGTH];
 
-	ZeonDB::SSL::SHA256("paris", out);
+	ZeonDB::SSL::SHA256("1234", out);
 
 	ZeonDB::Accounts::Account acc;
 	ZeonDB::Accounts::Permission perm = {
@@ -88,8 +88,8 @@ int main(int argc, char **argv) {
 
 	memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
 
-	db.register_account("theo", acc);
-	db.assign_perm("theo", "$", perm);
+	db.register_account("dummy", acc);
+	db.assign_perm("dummy", "$", perm);
 
 	ZeonDB::Template templ;
 	templ.add("ahoj", ZeonDB::Types::Value::new_int(0));

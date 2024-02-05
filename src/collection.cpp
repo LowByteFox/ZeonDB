@@ -173,8 +173,33 @@ namespace ZeonDB {
 			len = key.length();
 			stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
 			stream.write(key.data(), len);
+
+			// default value is being serialized
 			stream.write(reinterpret_cast<char*>(&(value[this->def_ver]->t)), sizeof(ZeonDB::Types::Type));
 			value[this->def_ver]->serialize(stream);
+
+			// number of versions
+			len = value.size() - 1; // - 1 is the default version
+			stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+
+			for (auto& [vkey, val] : value) {
+				if (vkey.compare(this->def_ver) == 0) continue;
+				len = vkey.length();
+				stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+				stream.write(vkey.data(), len);
+				stream.write(reinterpret_cast<char*>(&val->t), sizeof(ZeonDB::Types::Type));
+				val->serialize(stream);
+			}
+		}
+		len = this->perms.size();
+
+		stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+
+		for (auto& [key, value] : this->perms) {
+			len = key.length();
+			stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
+			stream.write(key.data(), len);
+			stream.write(reinterpret_cast<char*>(&value), sizeof(value));
 		}
 	}
 
@@ -191,8 +216,37 @@ namespace ZeonDB {
 			ctx.stream.read(reinterpret_cast<char*>(&obj->t), sizeof(ZeonDB::Types::Type));
 
 			obj->unserialize(ctx);
-
 			this->add(key, obj);
+
+			// number of versions
+			size_t vcount = 0;
+			ctx.stream.read(reinterpret_cast<char*>(&vcount), sizeof(size_t));
+
+			for (int j = 0; j < vcount; j++) {
+				auto obj2 = std::make_shared<ZeonDB::Types::Value>();
+
+				len = 0;
+				ctx.stream.read(reinterpret_cast<char*>(&len), sizeof(size_t));
+				std::string version(len, 0);
+				ctx.stream.read(version.data(), len);
+				ctx.stream.read(reinterpret_cast<char*>(&obj2->t), sizeof(ZeonDB::Types::Type));
+				obj2->unserialize(ctx);
+				this->add(key + "@" + version, obj2);
+			}
+		}
+
+		count = 0;
+		ctx.stream.read(reinterpret_cast<char*>(&count), sizeof(size_t));
+
+		for (int i = 0; i < count; i++) {
+			Accounts::Permission perms;
+			size_t len = 0;
+			ctx.stream.read(reinterpret_cast<char*>(&len), sizeof(size_t));
+			std::string key(len, 0);
+			ctx.stream.read(key.data(), len);
+			ctx.stream.read(reinterpret_cast<char*>(&perms), sizeof(perms));
+
+			this->perms[key] = perms;
 		}
 	}
 }

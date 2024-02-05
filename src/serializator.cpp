@@ -24,27 +24,33 @@ namespace ZeonDB {
 		if (fs::exists(dir_path) && fs::is_directory(dir_path)) {
 			CREATE_NOT_EXIST(dir_path / fs::path("data"));
 			CREATE_NOT_EXIST(dir_path / fs::path("accounts"));
+			CREATE_NOT_EXIST(dir_path / fs::path("templates"));
 
 			this->data_file.open(dir_path / fs::path("data"), flags);
 			this->accounts_file.open(dir_path / fs::path("accounts"), flags);
+			this->templates_file.open(dir_path / fs::path("templates"), flags);
 			return;
 		} else if (fs::exists(dir_path) && !fs::is_directory(dir_path)) {
 			fs::remove(dir_path);
 			fs::create_directory(dir_path);
 			CREATE_NOT_EXIST(dir_path / fs::path("data"));
 			CREATE_NOT_EXIST(dir_path / fs::path("accounts"));
+			CREATE_NOT_EXIST(dir_path / fs::path("templates"));
 
 			this->data_file.open(dir_path / fs::path("data"), flags);
 			this->accounts_file.open(dir_path / fs::path("accounts"), flags);
+			this->templates_file.open(dir_path / fs::path("templates"), flags);
 			return;
 		}
 
 		fs::create_directory(dir_path);
 		CREATE_NOT_EXIST(dir_path / fs::path("data"));
 		CREATE_NOT_EXIST(dir_path / fs::path("accounts"));
+		CREATE_NOT_EXIST(dir_path / fs::path("templates"));
 
 		this->data_file.open(dir_path / fs::path("data"), flags);
 		this->accounts_file.open(dir_path / fs::path("accounts"), flags);
+		this->templates_file.open(dir_path / fs::path("templates"), flags);
 	}
 
 	Serializer::~Serializer() {
@@ -59,11 +65,16 @@ namespace ZeonDB {
 		this->accounts_file.clear();
 		this->accounts_file.seekp(0);
 		db.serialize_accounts(this->accounts_file);
+
+		this->templates_file.clear();
+		this->templates_file.seekp(0);
+		db.serialize_templates(this->templates_file);
 		LOG_I("Serialized!", nullptr);
 	}
 
 	void Serializer::unserialize(ZeonDB::DB& db) {
 		db.unserialize(this->data_file);
 		db.unserialize_accounts(this->accounts_file);
+		db.unserialize_templates(this->templates_file);
 	}
 }

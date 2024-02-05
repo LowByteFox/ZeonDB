@@ -29,7 +29,6 @@ std::shared_ptr<Value> perm_to_val(const Permission& perm) {
 	auto value = Value::new_collection();
 	value->v.c.add("can_read", Value::new_bool(perm.can_read));
 	value->v.c.add("can_write", Value::new_bool(perm.can_write));
-	value->v.c.add("can_manage", Value::new_bool(perm.can_manage));
 
 	return value;
 }

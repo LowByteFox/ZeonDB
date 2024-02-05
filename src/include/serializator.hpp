@@ -19,6 +19,7 @@ namespace ZeonDB {
 		private:
 			std::fstream data_file;
 			std::fstream accounts_file;
+			std::fstream templates_file;
 
 		public:
 			Serializer(std::string);

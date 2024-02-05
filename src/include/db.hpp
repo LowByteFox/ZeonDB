@@ -42,5 +42,8 @@ namespace ZeonDB {
 
 			void serialize_accounts(std::fstream&);
 			void unserialize_accounts(std::fstream&);
+
+			void serialize_templates(std::fstream&);
+			void unserialize_templates(std::fstream&);
 	};
 }

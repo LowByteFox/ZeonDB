@@ -90,16 +90,6 @@ int main(int argc, char **argv) {
 
 	db.register_account("dummy", acc);
 	db.assign_perm("dummy", "$", perm);
-
-	ZeonDB::Template templ;
-	templ.add("ahoj", ZeonDB::Types::Value::new_int(0));
-	templ.add("cau", ZeonDB::Types::Value::new_float(0.0));
-	templ.add("xd", ZeonDB::Types::Value::new_collection());
-	templ.add("serus", ZeonDB::Types::Value::new_string(""));
-	templ.add("yay", ZeonDB::Types::Value::new_array());
-
-	db.add_template("cau", templ);
-
 	db.run();
 
 	serializer.serialize(db);

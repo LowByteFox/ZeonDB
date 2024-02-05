@@ -54,6 +54,65 @@ interface ZeonResult {
 	msg: string,
 }
 
+interface ZeonKey {
+	path: string,
+	version: string,
+	index: number,
+	next?: ZeonKey,
+	setVersion: (version: string) => ZeonKey,
+	setIndex: (index: number) => ZeonKey,
+	chainWith: (key: ZeonKey) => ZeonKey,
+	stringify: () => string,
+}
+
+function Key(pth: string): ZeonKey {
+	let path = pth;
+	let version = "";
+	let index = -1;
+
+	return {
+		path,
+		version,
+		index,
+		next: null,
+
+		setVersion: function(version: string) {
+			this.version = version;
+			return this;
+		},
+
+		setIndex: function(index: number) {
+			if (index < 0) {
+				throw "Index cannot be less than 0!"
+			}
+			this.index = index;
+			return this;
+		},
+
+		chainWith: function(next: ZeonKey) {
+			this.next = next;
+			return this;
+		},
+
+		stringify: function() {
+			let str = this.path;
+			if (this.version.length > 0) {
+				str += `@${this.version}`
+			}
+
+			if (this.index > -1) {
+				str += `[${this.index}]`
+			}
+
+			if (this.next) {
+				str += `.${this.next.stringify()}`
+			}
+
+			return str;
+		}
+	};
+}
+
 export class ZeonDB {
 	private connection: unknown;
 
@@ -67,7 +126,7 @@ export class ZeonDB {
 		});
 	}
 
-	async auth(username: string, password: string): boolean {
+	async login(username: string, password: string): boolean {
 		const u = text_encoder.encode(username + "\0");
 		const p = text_encoder.encode(password + "\0");
 		return (await dylib.symbols.ZeonAPI_Connection_auth(
@@ -90,9 +149,9 @@ export class ZeonDB {
 		return ret.getCString();
 	}
 
-	async set(key: string, value: unknown): ZeonResult {
+	async set(key: Key, value: unknown): ZeonResult {
 		const res = await
-		    this.exec(`set ${key} ${JSON.stringify(value)}`);
+		    this.exec(`set ${key.stringify()} ${JSON.stringify(value)}`);
 		if (res) {
 			return {
 				ok: res,
@@ -106,8 +165,8 @@ export class ZeonDB {
 		};
 	}
 
-	async get(key: string): ZeonResult {
-		const res = await this.exec(`get ${key}`);
+	async get(key: Key): ZeonResult {
+		const res = await this.exec(`get ${key.stringify()}`);
 		if (res) {
 			return {
 				ok: res,
@@ -136,19 +195,34 @@ export class ZeonDB {
 
 initZeonDB("../build/libZeonCAPI.so");
 
+function create_blog(title, author, ...tags) {
+	return {
+		title,
+		author,
+		tags
+	};
+}
+
 const db = await (new ZeonDB("127.0.0.1", 6748));
 
-if (await db.auth("theo", "paris")) {
-	let res = await db.set('Deno', {
-		je: {
-			super: true
-		}
-	});
+// cached key
+const docRef = Key("users").setVersion("theo");
+
+const data = {
+	blogs: [
+		create_blog("Why Zig sucks", docRef.version, "zig", "cc", "errors", "compiler"),
+		create_blog("Bun sucks", docRef.version, "bun", "javascript", "typescript", "denobetter")
+	]
+};
+
+if (await db.login("dummy", "1234")) {
+	let res = await db.set(docRef, data);
 	if (!res.ok) {
 		console.error(res.msg);
 		Deno.exit(1);
 	}
-	res = await db.get("$");
+
+	res = await db.get(Key("$"));
 	if (res.ok) {
 		console.log(res.value);
 	} else {

@@ -30,6 +30,9 @@ namespace ZeonDB {
 		}
 
 		auto val = this->db[key.key][key.version];
+		if (!this->db[key.key].contains(this->def_ver)) {
+			this->db[key.key][this->def_ver] = ZeonDB::Types::Value::new_string("");
+		}
 
 		if (val && val->t == Types::Type::Array) {
 			if (key.array_range.first > -1) {

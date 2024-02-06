@@ -222,7 +222,7 @@ if (await db.login("dummy", "1234")) {
 		Deno.exit(1);
 	}
 
-	res = await db.get(Key("$"));
+	res = await db.get(docRef);
 	if (res.ok) {
 		console.log(res.value);
 	} else {

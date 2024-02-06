@@ -16,12 +16,10 @@ namespace ZeonDB::Net {
 		private:
 			ZeonFrameStatus status;
 			uint64_t target_length;
-			std::array<char, 1024> buffer;
+			std::array<char, 9> buffer;
 		public:
 			void to_buffer(ZeonFrameStatus, uint64_t);
 			void from_buffer();
-			void write_buffer(const std::array<char, 1015>&);
-			std::array<char, 1015> read_buffer();
 			char* get_buffer();
 			uint64_t get_length();
 			ZeonFrameStatus get_status();

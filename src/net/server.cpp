@@ -17,6 +17,7 @@ using ZeonDB::Net::ZeonFrameStatus;
 using ZeonDB::Types::FormatType;
 
 void alloc_header(uv_handle_t*, size_t, uv_buf_t*);
+void alloc_transfer(uv_handle_t*, size_t, uv_buf_t*);
 void get_frame(uv_stream_t *, ssize_t, const uv_buf_t*);
 void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
 
@@ -158,6 +159,7 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 			client->frame.from_buffer();
 			client->transfer_max = client->frame.get_length();
 			client->read = 0;
+
 			if (client->transfer_max > 0) {
 				uv_read_stop(handle);
 				uv_read_start((uv_stream_t*) client->get_client(), alloc_transfer, transfer_buffer);
@@ -182,10 +184,11 @@ void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	}
 
 	if (nread > 0) {
+		LOG_W("Read: %d", nread);
 		client->transfer_max -= nread;
 		client->buffer += std::string(client->transfer_buffer.data(), nread);
 
-		if (client->transfer_max == 0) {
+		if (client->transfer_max <= 0) {
 			uv_read_stop(handle);
 			uv_read_start((uv_stream_t*) client->get_client(), alloc_header, get_frame);
 			handle_frame(client, handle);

@@ -6,32 +6,18 @@
 #include <net/frame.hpp>
 
 namespace ZeonDB::Net {
-
 	void ZeonFrame::to_buffer(ZeonFrameStatus status, uint64_t length) {
 		memset(this->buffer.data(), 0, 9);
 		memcpy(this->buffer.data(), &status, sizeof(status));
 
-		switch (status) {
-			case ZeonFrameStatus::Command:
-			case ZeonFrameStatus::Error:
-			case ZeonFrameStatus::Auth:
-				this->target_length = length;
-				memcpy(this->buffer.data() + sizeof(status), &length, sizeof(uint64_t));
-			default:
-				;
-		}
+		this->target_length = length;
+		memcpy(this->buffer.data() + sizeof(status), &length, sizeof(uint64_t));
 	}
 
 	void ZeonFrame::from_buffer() {
 		memcpy(&this->status, this->buffer.data(), sizeof(ZeonFrameStatus));
-		switch (this->status) {
-			case ZeonFrameStatus::Command:
-			case ZeonFrameStatus::Error:
-			case ZeonFrameStatus::Auth:
-				memcpy(&this->target_length, this->buffer.data() + sizeof(ZeonFrameStatus), sizeof(uint64_t));
-			default:
-				;
-		}
+
+		memcpy(&this->target_length, this->buffer.data() + sizeof(ZeonFrameStatus), sizeof(uint64_t));
 	}
 
 	char* ZeonFrame::get_buffer() {

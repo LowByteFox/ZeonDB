@@ -24,7 +24,7 @@ namespace ZeonDB::Net {
 			ZeonFrame frame; // for libuv
 			std::string buffer; // building command
 		 	size_t read;
-			size_t transfer_max;
+			ssize_t transfer_max;
 
 			Client(Server*, uv_tcp_t);
 

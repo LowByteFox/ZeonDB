@@ -2,14 +2,17 @@
 
 #include <string>
 #include <cstdint>
+#include <array>
 
 #include <net/frame.hpp>
 #include <uv.h>
 
 namespace ZeonAPI {
 	class Connection {
-		friend void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t* _);
-		friend void alloc_buff(uv_handle_t *handle, size_t _, uv_buf_t *buf);
+		friend void alloc_header(uv_handle_t*, size_t, uv_buf_t*);
+		friend void alloc_transfer(uv_handle_t*, size_t, uv_buf_t*);
+		friend void get_frame(uv_stream_t *, ssize_t, const uv_buf_t*);
+		friend void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
 		friend void handle_frame(ZeonAPI::Connection *client, uv_stream_t *stream);
 
 		private:
@@ -23,10 +26,13 @@ namespace ZeonAPI {
 			bool connected;
 			ZeonDB::Net::ZeonFrame frame;
 			size_t read;
+			ssize_t transfer_max;
+
+			std::array<char, 1024> transfer_buffer;
 
 			std::string error; // error from operation
 			
-			void send_message();
+			void send_message(std::string, ZeonDB::Net::ZeonFrameStatus);
 
 		public:
 			Connection(std::string, uint16_t);

@@ -62,20 +62,24 @@ namespace ZeonDB::Net {
 		std::vector<std::string> strs;
 		std::vector<uv_buf_t> vec;
 
-		for (int i = 0; i < len; i += 1024) {
+		for (int i = 0; i <= len; i += 1024) {
 			strs.push_back(buf.substr(i, 1024));
 
 			if (i == 0) {
 				char *frame_buffer = this->frame.get_buffer();
-				std::string first_packet(9 + 1024, 0);
+				std::string first_packet(9 + (status == ZeonFrameStatus::Ok ? 0 : 1024), 0);
+				
 				memcpy(first_packet.data(), frame_buffer, 9);
 
-				std::string& back_ref = strs.back();
-				memcpy(first_packet.data() + 9, back_ref.data(), back_ref.length());
-
-				strs.push_back(first_packet);
-				
-				vec.push_back(uv_buf_init(strs.back().data(), first_packet.length()));
+				if (status != ZeonFrameStatus::Ok) {
+					std::string& back_ref = strs.back();
+					memcpy(first_packet.data() + 9, back_ref.data(), back_ref.length());
+					strs.push_back(first_packet);
+					vec.push_back(uv_buf_init(strs.back().data(), first_packet.length()));
+				} else {
+					strs.push_back(first_packet);
+					vec.push_back(uv_buf_init(strs.back().data(), first_packet.length()));
+				}
 				continue;
 			}
 

@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include <uv.h>
 #include <ssl.hpp>
@@ -32,9 +33,11 @@ void send_msg(uv_write_t *req, int status) {
 #endif
 
 namespace ZeonAPI {
-	void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t* _);
-	void alloc_buff(uv_handle_t *handle, size_t _, uv_buf_t *buf);
-	void handle_frame(ZeonAPI::Connection *client, uv_stream_t stream);
+	void alloc_header(uv_handle_t*, size_t, uv_buf_t*);
+	void alloc_transfer(uv_handle_t*, size_t, uv_buf_t*);
+	void get_frame(uv_stream_t *, ssize_t, const uv_buf_t*);
+	void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
+	void handle_frame(ZeonAPI::Connection *client, uv_stream_t *stream);
 
 	Connection::Connection(std::string ip, uint16_t port) {
 		this->read = 0;
@@ -50,7 +53,7 @@ namespace ZeonAPI {
 		this->tcp.data = this;
 
 		uv_run(&this->loop, UV_RUN_ONCE); // Debilny windows sprosty
-		uv_read_start((uv_stream_t*) &this->tcp, alloc_buff, on_read);
+		uv_read_start((uv_stream_t*) &this->tcp, alloc_header, get_frame);
 		uv_run(&this->loop, UV_RUN_DEFAULT);
 		this->connected = true;
 	}
@@ -71,13 +74,8 @@ namespace ZeonAPI {
 		std::string msg = username + " ";
 		msg.append((char *) out);
 
-		auto buffer = this->frame.read_buffer();
-		strncpy(buffer.data(), msg.data(), MIN(msg.length(), 1015));
-		this->frame.to_buffer(ZeonFrameStatus::Auth, msg.length());
-		this->frame.write_buffer(buffer);
-
-		this->send_message();
-		uv_read_start((uv_stream_t*) &this->tcp, alloc_buff, on_read);
+		this->send_message(msg, ZeonFrameStatus::Auth);
+		uv_read_start((uv_stream_t*) &this->tcp, alloc_header, get_frame);
 		uv_run(&this->loop, UV_RUN_DEFAULT);
 
 		return this->authenticated;
@@ -87,13 +85,8 @@ namespace ZeonAPI {
 		this->error = "";
 		this->buffer = "";
 
-		auto buffer = this->frame.read_buffer();
-		strncpy(buffer.data(), command.data(), MIN(command.length(), 1015));
-		this->frame.to_buffer(ZeonFrameStatus::Command, command.length());
-		this->frame.write_buffer(buffer);
-
-		this->send_message();
-		uv_read_start((uv_stream_t*) &this->tcp, alloc_buff, on_read);
+		this->send_message(command, ZeonFrameStatus::Command);
+		uv_read_start((uv_stream_t*) &this->tcp, alloc_header, get_frame);
 		uv_run(&this->loop, UV_RUN_DEFAULT);
 
 		return this->error.length() == 0;
@@ -111,82 +104,139 @@ namespace ZeonAPI {
 		return &this->buffer;
 	}
 
-	void Connection::send_message() {
-		uv_write_t* req = new uv_write_t;
-		this->uv_buf = uv_buf_init(this->frame.get_buffer(), 1024);
-		uv_write(req, (uv_stream_t*) &this->tcp, &this->uv_buf, 1, send_msg);
-	}
+	void Connection::send_message(std::string buf, ZeonFrameStatus status) {
+		size_t len = buf.length();
 
-	void alloc_buff(uv_handle_t *handle, size_t _, uv_buf_t *buf) {
-		auto* client = static_cast<Connection*>(handle->data);
+		this->frame.to_buffer(status, len);
 
-		if (client->read > 0) {
-			buf->len = 1024 - client->read;
-			buf->base = client->frame.get_buffer() + client->read;
+		std::vector<std::string> strs;
+		std::vector<uv_buf_t> vec;
+
+		for (int i = 0; i <= len; i += 1024) {
+			strs.push_back(buf.substr(i, 1024));
+
+			if (i == 0) {
+				char *frame_buffer = this->frame.get_buffer();
+				std::string first_packet(9 + (status == ZeonFrameStatus::Ok ? 0 : 1024), 0);
+				
+				memcpy(first_packet.data(), frame_buffer, 9);
+
+				if (status != ZeonFrameStatus::Ok) {
+					std::string& back_ref = strs.back();
+					memcpy(first_packet.data() + 9, back_ref.data(), back_ref.length());
+					strs.push_back(first_packet);
+					vec.push_back(uv_buf_init(strs.back().data(), first_packet.length()));
+				} else {
+					strs.push_back(first_packet);
+					vec.push_back(uv_buf_init(strs.back().data(), first_packet.length()));
+				}
+				continue;
+			}
+
+			std::string& back_ref = strs.back();
+			vec.push_back(uv_buf_init(back_ref.data(), back_ref.length()));
 		}
 
-		buf->base = client->frame.get_buffer();
-		buf->len = 1024;
+		uv_write_t* req = new uv_write_t;
+		uv_write(req, (uv_stream_t*) &this->tcp, vec.data(), vec.size(), send_msg);
 	}
 
-	void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t* _) {
-		auto* client = static_cast<ZeonAPI::Connection*>(stream->data);
+	void alloc_header(uv_handle_t *handle, size_t _, uv_buf_t *buf) {
+		auto* conn = static_cast<Connection*>(handle->data);
+
+		if (conn->read > 0) {
+			buf->len = 9 - conn->read;
+			buf->base = conn->frame.get_buffer() + conn->read;
+			return;
+		}
+
+		buf->base = conn->frame.get_buffer();
+		buf->len = 9;
+	}
+
+	void alloc_transfer(uv_handle_t *handle, size_t _, uv_buf_t *buf) {
+		auto* conn = static_cast<Connection*>(handle->data);
+
+		buf->base = conn->transfer_buffer.data();
+		buf->len = 1024;
+	}
+	
+	void get_frame(uv_stream_t *stream, ssize_t nread, const uv_buf_t* buf) {
+		auto* conn = static_cast<Connection*>(stream->data);
+
 		if (nread == UV_EOF) {
-			uv_stop(&client->loop);
+			uv_stop(&conn->loop);
 			uv_read_stop(stream);
 			return;
 		}
 
 		if (nread > 0) {
-			client->read += nread;
+			conn->read += nread;
 
-			if (client->read == 1024) {
-				client->frame.from_buffer();
-				handle_frame(client, stream);
+			if (conn->read == 9) {
+				conn->frame.from_buffer();
+				conn->transfer_max = conn->frame.get_length();
+				conn->read = 0;
+				if (conn->transfer_max > 0) {
+					uv_read_stop(stream);
+					uv_read_start((uv_stream_t*) &conn->tcp, alloc_transfer, transfer_buffer);
+				} else {
+					handle_frame(conn, stream);
+				}
 			}
 		} else if (nread == 0) {
 		} else {
 			fprintf(stderr, "Something went wrong! %s\n", uv_strerror((int) nread));
-			uv_stop(&client->loop);
-			client->connected = false;
+			uv_stop(&conn->loop);
+			uv_read_stop(stream);
+			conn->connected = false;
+		}
+	}
+
+	void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
+		auto* conn = static_cast<Connection*>(handle->data);
+
+		if (nread == UV_EOF) {
+			uv_stop(&conn->loop);
+			uv_read_stop(handle);
+			return;
+		}
+
+		if (nread > 0) {
+			conn->transfer_max -= nread;
+			conn->buffer += std::string(conn->transfer_buffer.data(), nread);
+
+			if (conn->transfer_max <= 0) {
+				uv_read_stop(handle);
+				uv_read_start((uv_stream_t*) &conn->tcp, alloc_header, get_frame);
+				handle_frame(conn, handle);
+			}
+		} else if (nread == 0) {
+		} else {
+			fprintf(stderr, "Something went wrong! %s\n", uv_strerror((int) nread));
+			uv_stop(&conn->loop);
 		}
 	}
 
 	void handle_frame(ZeonAPI::Connection *client, uv_stream_t *stream) {
-		client->read = 0;
+		uv_read_stop(stream);
 		switch (client->frame.get_status()) {
-			case ZeonFrameStatus::Ok:
-				uv_read_stop(stream);
-				break;
 			case ZeonFrameStatus::Auth:
 			{
-				auto buff = client->frame.read_buffer();
-				uv_read_stop(stream);
-				memset(buff.data() + client->frame.get_length(), 0, 1015 - client->frame.get_length());
+				std::string buff = client->buffer;
 
 				if (memcmp(buff.data(), "OK", 2) == 0) {
 					client->authenticated = true;
 				} else {
-					client->error = buff.data();
+					client->error = buff;
 				}
 				break;
 			}
 			case ZeonFrameStatus::Error:
 			{
-				auto buff = client->frame.read_buffer();
-				memset(buff.data() + client->frame.get_length(), 0, 1015 - client->frame.get_length());
-				uv_read_stop(stream);
+				std::string buff = client->buffer;
 
-				client->error = buff.data();
-				break;
-			}
-			case ZeonFrameStatus::Command:
-			{
-				auto buff = client->frame.read_buffer();
-				memset(buff.data() + client->frame.get_length(), 0, 1015 - client->frame.get_length());
-				uv_read_stop(stream);
-
-				client->buffer = buff.data();
+				client->error = buff;
 				break;
 			}
 			default:

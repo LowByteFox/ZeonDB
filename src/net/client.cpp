@@ -84,6 +84,8 @@ namespace ZeonDB::Net {
 			}
 
 			std::string& back_ref = strs.back();
+			back_ref.resize(1024, 0);
+			LOG_I("Contains?: %d", contains0xDF(back_ref));
 			vec.push_back(uv_buf_init(back_ref.data(), back_ref.length()));
 		}
 

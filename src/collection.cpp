@@ -1,6 +1,7 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <functional>
 
 #include <logger.hpp>
@@ -119,18 +120,20 @@ namespace ZeonDB {
 		}
 	}
 
-	std::string Collection::stringify(Types::FormatType fmtType, std::string username, ZeonDB::Types::RecursionProtector* protector) {
-		std::string str = "{";
-
+	void Collection::stringify(Types::FormatType fmtType, std::string username, ZeonDB::Types::RecursionProtector* protector, std::stringstream& res) {
 		if (this->has_perms(username, "$")) {
 			Accounts::Permission perms = this->get_perms(username, "$");
 			if (!perms.can_read) {
-				return "{}";
+				res << "{}";
+				return;
 			}
 		}
 
-		for (auto& [key, value] : this->db) {
-			const auto& val = value[this->def_ver];
+		res << "{";
+
+		for (auto it = this->db.begin(); it != this->db.end(); it++) {
+			auto& val = it->second[this->def_ver];
+			const auto& key = it->first;
 
 			if (this->has_perms(username, key)) {
 				Accounts::Permission perms = this->get_perms(username, key);
@@ -141,34 +144,27 @@ namespace ZeonDB {
 
 			if (key.find(' ') != std::string::npos || fmtType == Types::FormatType::JSON) {
 				if (fmtType == Types::FormatType::JSON) {
-					str += "\"" + key + "\":";
+					res << "\"" + key + "\":";
 				} else {
-					str += "\"" + key + "\"";
+					res << "\"" + key + "\"";
 				}
 			} else {
-				str += key;
+				res << key;
 			}
 
-			str += " ";
-			str += val->_stringify(fmtType, username, protector);
-			if (fmtType == Types::FormatType::JSON) {
-				str += ", ";
-			} else {
-				str += " ";
+			res << " ";
+			val->_stringify(fmtType, username, protector, res);
+
+			if (std::next(it) != this->db.end()) {
+				if (fmtType == Types::FormatType::JSON) {
+					res << ", ";
+				} else {
+					res << " ";
+				}
 			}
 		}
 
-		if (str.length() > 1 && fmtType == Types::FormatType::JSON) {
-			str.erase(str.length() - 1, 1);
-		}
-
-		if (str.length() > 1) {
-			str[str.length() - 1] = '}';
-		} else {
-			str += "}";
-		}
-
-		return str;
+		res << "}";
 	}
 
 	void Collection::serialize(std::fstream& stream) {

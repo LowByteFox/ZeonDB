@@ -134,6 +134,7 @@ namespace ZeonAPI {
 			}
 
 			std::string& back_ref = strs.back();
+			back_ref.resize(1024, 0);
 			vec.push_back(uv_buf_init(back_ref.data(), back_ref.length()));
 		}
 

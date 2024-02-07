@@ -195,11 +195,11 @@ export class ZeonDB {
 
 initZeonDB("../build/libZeonCAPI.so");
 
-function create_blog(title, author, ...tags) {
+function create_blog(title, author, ...args) {
 	return {
 		title,
 		author,
-		tags
+		tags: args[0]
 	};
 }
 
@@ -682,14 +682,32 @@ const data = [
 	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
 	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
 	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
+	create_blog("blog", "amogus", "this will kill my pc for sure".split(" ")),
 ];
 
 if (await db.login("dummy", "1234")) {
 	let res = await db.set(docRef, data);
-	if (!res.ok) {
-		console.error(res.msg);
-		Deno.exit(1);
-	}
 
 	res = await db.get(docRef);
 	if (res.ok) {

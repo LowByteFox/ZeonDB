@@ -7,6 +7,7 @@
 #include <memory>
 #include <functional>
 #include <fstream>
+#include <sstream>
 
 #include <accounts.hpp>
 #include <utils/string.hpp>
@@ -43,7 +44,7 @@ namespace ZeonDB {
 			void iter(std::function<void(ZeonDB::Utils::String, std::shared_ptr<Types::Value>)>, std::string);
 			std::vector<ZeonDB::Utils::String> get_versions(ZeonDB::Utils::Key);
 
-			std::string stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*);
+			void stringify(Types::FormatType, std::string, ZeonDB::Types::RecursionProtector*, std::stringstream&);
 			void serialize(std::fstream&);
 
 			void unserialize(SerializationContext);

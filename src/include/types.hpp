@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <fstream>
+#include <sstream>
 
 #include <link.hpp>
 #include <utils/string.hpp>
@@ -55,9 +56,9 @@ namespace ZeonDB::Types {
 		static std::shared_ptr<Value> new_collection();
 		static std::shared_ptr<Value> new_link(std::string);
 
-		std::string stringify(FormatType fmtType, std::string);
-		std::string _stringify(FormatType fmtType, std::string, RecursionProtector*);
-		std::string _stringify_array(FormatType, std::string, RecursionProtector*);
+		void stringify(FormatType fmtType, std::string, std::stringstream&);
+		void _stringify(FormatType fmtType, std::string, RecursionProtector*, std::stringstream&);
+		void _stringify_array(FormatType, std::string, RecursionProtector*, std::stringstream&);
 
 		void serialize(std::fstream&);
 		void serialize_array(std::fstream&);

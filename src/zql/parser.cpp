@@ -186,7 +186,7 @@ namespace ZeonDB::ZQL {
 			return ctxs;
 		}
 
-		while (tok.type != TokenTypes::eof) {
+		while (tok.type != TokenTypes::eof && tok.type != TokenTypes::illegal) {
 			if (tok.type != TokenTypes::identifier) {
 				Context ctx(this->db, "Expected identifier at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
 				ctxs.push_back(ctx);
@@ -220,6 +220,11 @@ namespace ZeonDB::ZQL {
 			}
 			tok = this->lexer.parse_token();
 		}
+		if (tok.type == TokenTypes::illegal) {
+			Context ctx(this->db, "Invalid token");
+			ctxs.push_back(ctx);
+		}
+
 		return ctxs;
 	}
 }

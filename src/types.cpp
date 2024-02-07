@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <cstdint>
 
 #include <types.hpp>
@@ -57,66 +58,66 @@ namespace ZeonDB::Types {
 		return ptr;
 	}
 
-	std::string Value::_stringify_array(FormatType fmtType, std::string username, RecursionProtector* protector) {
-		std::string str = "[";
+	void Value::_stringify_array(FormatType fmtType, std::string username, RecursionProtector* protector, std::stringstream& res) {
+		res << "[";
 
-		for (const auto& item : this->v.a) {
-			str += item->_stringify(fmtType, username, protector);
-			if (fmtType == FormatType::JSON) {
-				str += ", ";
-			} else {
-				str += " ";
+		for (auto it = this->v.a.begin(); it != this->v.a.end(); it++) {
+			(*it)->_stringify(fmtType, username, protector, res);
+
+			if (std::next(it) != this->v.a.end()) {
+				if (fmtType == FormatType::JSON) {
+					res << ", ";
+				} else {
+					res << " ";
+				}
 			}
 		}
 
-		if (str.length() > 1 && fmtType == FormatType::JSON) {
-			str.erase(str.length() - 1, 1);
-		}
-
-		if (str.length() > 1) {
-			str[str.length() - 1] = ']';
-		} else {
-			str += "]";
-		}
-
-		return str;
+		res << "]";
 	}
 
-	std::string Value::stringify(FormatType fmtType, std::string username) {
+	void Value::stringify(FormatType fmtType, std::string username, std::stringstream& res) {
 		RecursionProtector protector;
-		return this->_stringify(fmtType, username, &protector);
+		this->_stringify(fmtType, username, &protector, res);
 	}
 
-	std::string Value::_stringify(FormatType fmtType, std::string username, RecursionProtector* protector) {
+	void Value::_stringify(FormatType fmtType, std::string username, RecursionProtector* protector, std::stringstream& res) {
 		switch (this->t) {
 			case Type::Array:
-				return this->_stringify_array(fmtType, username, protector);
+				this->_stringify_array(fmtType, username, protector, res);
+				break;
 			case Type::String:
 				if (this->v.s.find(' ') != std::string::npos || fmtType == FormatType::JSON) {
-					return "\"" + this->v.s + "\"";
+					res << "\"" + this->v.s + "\"";
 				} else {
-					return this->v.s;
+					res << this->v.s;
 				}
+				break;
 			case Type::Int:
-				return std::to_string(this->v.i);
+				res << this->v.i;
+				break;
 			case Type::Float:
-				return std::to_string(this->v.f);
+				res << this->v.f;
+				break;
 			case Type::Bool:
-				return this->v.b ? "true" : "false";
+				res << (this->v.b ? "true" : "false");
+				break;
 			case Type::Collection:
-				return this->v.c.stringify(fmtType, username, protector);
+				this->v.c.stringify(fmtType, username, protector, res);
+				break;
 			case Type::Link:
 			{
 				auto val = this->v.l.follow(username, protector);
-				if (val == nullptr) return "\"\"";
+				if (val == nullptr) {
+					res << "\"\"";
+					return;
+				}
 
 				protector->push_back(val);
-				std::string str = val->_stringify(fmtType, username, protector);
+				val->_stringify(fmtType, username, protector, res);
 				protector->pop_back();
-				return str;
 			}
 		}
-		return "??";
 	}
 
 

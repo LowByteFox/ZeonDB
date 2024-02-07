@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <cstdio>
+#include <sstream>
 
 #include <logger.hpp>
 #include <db.hpp>
@@ -124,7 +125,9 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 					if ((*opts)["format"].v.s.compare("ZQL") == 0) {
 						fmtType = FormatType::ZQL;
 					}
-					std::string res = trace.value->stringify(fmtType, client->get_user());
+					std::stringstream stream;
+					trace.value->stringify(fmtType, client->get_user(), stream);
+					std::string res = stream.str();
 
 					client->send_message(res, ZeonFrameStatus::Command);
 				} else {

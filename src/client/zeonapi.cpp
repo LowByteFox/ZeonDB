@@ -75,7 +75,6 @@ namespace ZeonAPI {
 		msg.append((char *) out, SHA256_DIGEST_LENGTH);
 
 		this->send_message(msg, ZeonFrameStatus::Auth);
-		uv_read_start((uv_stream_t*) &this->tcp, alloc_header, get_frame);
 		uv_run(&this->loop, UV_RUN_DEFAULT);
 
 		return this->authenticated;
@@ -86,7 +85,6 @@ namespace ZeonAPI {
 		this->buffer = "";
 
 		this->send_message(command, ZeonFrameStatus::Command);
-		uv_read_start((uv_stream_t*) &this->tcp, alloc_header, get_frame);
 		uv_run(&this->loop, UV_RUN_DEFAULT);
 
 		return this->error.length() == 0;
@@ -167,7 +165,6 @@ namespace ZeonAPI {
 
 		if (nread == UV_EOF) {
 			uv_stop(&conn->loop);
-			uv_read_stop(stream);
 			return;
 		}
 
@@ -189,7 +186,6 @@ namespace ZeonAPI {
 		} else {
 			fprintf(stderr, "Something went wrong! %s\n", uv_strerror((int) nread));
 			uv_stop(&conn->loop);
-			uv_read_stop(stream);
 			conn->connected = false;
 		}
 	}
@@ -199,7 +195,6 @@ namespace ZeonAPI {
 
 		if (nread == UV_EOF) {
 			uv_stop(&conn->loop);
-			uv_read_stop(handle);
 			return;
 		}
 
@@ -220,7 +215,7 @@ namespace ZeonAPI {
 	}
 
 	void handle_frame(ZeonAPI::Connection *client, uv_stream_t *stream) {
-		uv_read_stop(stream);
+		uv_stop(&client->loop);
 		switch (client->frame.get_status()) {
 			case ZeonFrameStatus::Auth:
 			{

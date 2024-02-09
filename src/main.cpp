@@ -82,7 +82,14 @@ int main(int argc, char **argv) {
 
 	uv_signal_t sigint;
 	uv_signal_init(uv_default_loop(), &sigint);
-	uv_signal_start(&sigint, signal_handler, SIGINT);
+	// Create a signal handler
+    uv_signal_t sigpipe_handler;
+    uv_signal_init(uv_default_loop(), &sigpipe_handler);
+
+    // Ignore SIGPIPE
+    uv_signal_start(&sigpipe_handler, [](uv_signal_t* handle, int signum) {
+        // Do nothing, effectively ignoring the SIGPIPE signal
+    }, SIGPIPE);uv_signal_start(&sigint, signal_handler, SIGINT);
 	
 	ZeonDB::DB db;
 	serializer.unserialize(db);

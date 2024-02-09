@@ -173,7 +173,7 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	} else if (nread == 0) {
 	} else {
 		LOG_E("%s", uv_strerror(nread));
-		uv_stop(client->get_server()->get_loop());
+		uv_read_stop(handle);
 	}
 }
 
@@ -198,7 +198,7 @@ void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	} else if (nread == 0) {
 	} else {
 		LOG_E("%s", uv_strerror(nread));
-		uv_stop(client->get_server()->get_loop());
+		uv_read_stop(handle);
 	}
 }
 

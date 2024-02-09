@@ -25,6 +25,10 @@ ninja -C build
 3. Install dependencies with `pacman -S git pkgconf mingw-w64-x86_64-cmake mingw-w64-x86_64-libressl mingw-w64-x86_64-libuv mingw-w64-x86_64-ninja mingw-w64-x86_64-gcc`
 4. Now compile using UNIX compilation instructions
 
+### SDKs
+Currently, ZeonDB has JavaScript SDK for only one runtime
+- https://github.com/LowByteFox/Zeonic
+
 > Note
 > Official repository is at [codeberg](https://codeberg.org/LowByteFox/ZeonDB) <br>
 > Mirror of the repository is at [github](https://github.com/LowByteFox/ZeonDB)

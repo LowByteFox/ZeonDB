@@ -51,6 +51,7 @@ namespace ZeonDB {
 	}
 
 	void Logger::debug(const char *fn, size_t line, const char *format, ...) {
+#ifdef _DEBUG
 		va_list args;
 
 		va_start(args, format);
@@ -70,6 +71,7 @@ namespace ZeonDB {
 		vprintf(format, args);
 		printf("\n");
 		va_end(args);
+#endif
 	}
 
 	void Logger::info(const char *fn, size_t line, const char *format, ...) {

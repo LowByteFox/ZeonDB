@@ -10,7 +10,7 @@
 
 namespace ZeonDB::Accounts {
 	void AccountManager::register_account(std::string username, Account account) {
-		LOG_I("Account \"%s\" was registered!", username.c_str());
+		LOG_I("Account \"%s\" was registered! %p", username.c_str(), this);
 		this->accounts[username] = account;
 	}
 
@@ -23,6 +23,18 @@ namespace ZeonDB::Accounts {
 		return false;
 	}
 
+    bool AccountManager::delete_account(std::string username) {
+        if (this->accounts.contains(username)) {
+            LOG_W("Account \"%s\" was deleted!", username.c_str());
+            this->accounts.erase(username);
+        }
+        return false;
+    }
+
+    bool AccountManager::has_account(std::string username) {
+        return this->accounts.contains(username);
+    }
+
 	void AccountManager::serialize(std::fstream& stream) {
 		size_t len = this->accounts.size();
 		stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
@@ -31,7 +43,7 @@ namespace ZeonDB::Accounts {
 			len = name.length();
 			stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
 			stream.write(name.data(), len);
-			stream.write(reinterpret_cast<char*>(acc.password), SHA256_DIGEST_LENGTH);
+			stream.write(reinterpret_cast<char*>(&acc), sizeof(Account));
 		}
 	}
 
@@ -45,9 +57,18 @@ namespace ZeonDB::Accounts {
 			ctx.stream.read(reinterpret_cast<char*>(&len), sizeof(size_t));
 			std::string username(len, 0);
 			ctx.stream.read(username.data(), len);
-			ctx.stream.read(reinterpret_cast<char*>(a.password), SHA256_DIGEST_LENGTH);
+			ctx.stream.read(reinterpret_cast<char*>(&a), sizeof(Account));
 
 			this->accounts[username] = a;
 		}
 	}
+
+    Account* AccountManager::get_account(std::string username) {
+        if (!this->accounts.contains(username)) return nullptr;
+        return &this->accounts[username];
+    }
+
+    size_t AccountManager::account_count() {
+        return this->accounts.size();
+    }
 }

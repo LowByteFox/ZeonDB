@@ -19,8 +19,9 @@ const static std::string HELP_MSG = R"(help: auth (subcommand)
 get <key> (of <user>) -- get your permissions at <key> or from <user>
 set <key> <perm> (to <user>) -- set <perm> at <key> to yourself or to <user>
 create <user> <pass> <perm> -- create user <user> with password <pass> and default permission <perm>
-promote <user> -- allow user to manage accounts
-demote <user> -- disallow user to manage accounts
+promote <user> -- allow <user> to manage accounts
+demote <user> -- disallow <user> to manage accounts
+delete <user> -- delete <user>
 
 key syntax: key@branch
 perm syntax: {can_write: bool, can_read: bool})";
@@ -44,7 +45,7 @@ std::optional<Permission> val_to_perm(const std::shared_ptr<Value>& val) {
 
 	perm.can_read = can_read->v.b;
 	perm.can_write = can_write->v.b;
-	perm.can_manage = true;
+	perm.can_manage = false;
 
 	return perm;
 }
@@ -53,6 +54,13 @@ void get_perms(ZeonDB::ZQL::Context* ctx, bool other_user) {
 	auto key = ctx->get_arg(1);
 
 	std::string user = ctx->get_user();
+
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
+
 	auto perms = ctx->get_perm("$");
 
 	if (!perms.can_manage) {
@@ -114,6 +122,13 @@ void set_perms(ZeonDB::ZQL::Context *ctx, bool other_user) {
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
 
+    auto* acc = ctx->get_account(user);
+
+    if (acc && acc->special) {
+        ctx->error = "dummy can only create account!";
+        return;
+    }
+
 	if (!perms.can_manage) {
 		LOG_W("User \"%s\" tried to set permissions!", user.c_str());
 		ctx->error = "Permissions denied, cannot manage!";
@@ -173,6 +188,8 @@ void create_user(ZeonDB::ZQL::Context* ctx) {
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
 
+    auto* acc1 = ctx->get_account(user);
+
 	if (!perms.can_manage) {
 		LOG_W("User \"%s\" tried to create user!", user.c_str());
 		ctx->error = "Permissions denied, cannot manage!";
@@ -188,12 +205,17 @@ void create_user(ZeonDB::ZQL::Context* ctx) {
 	Permission perm_val = perm.value();
 	perm_val.can_manage = false;
 
+    if (acc1 && acc1->special) {
+        perm_val.can_manage = true;
+    }
+
 	auto mgr = ctx->get_account_manager();
 
 	unsigned char out[SHA256_DIGEST_LENGTH];
 
 	ZeonDB::SSL::SHA256(pass->v.s.c_str(), out);
 	ZeonDB::Accounts::Account acc;
+    acc.special = false;
 
 	memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
 
@@ -204,6 +226,12 @@ void create_user(ZeonDB::ZQL::Context* ctx) {
 void manage_user(ZeonDB::ZQL::Context *ctx, bool promote) {
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
+
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
 
 	if (!perms.can_manage) {
 		LOG_W("User \"%s\" tried to manage user!", user.c_str());
@@ -227,6 +255,34 @@ void manage_user(ZeonDB::ZQL::Context *ctx, bool promote) {
 	db->v.c.assign_perm(target_user->v.s, "$", perm);
 }
 
+void delete_user(ZeonDB::ZQL::Context *ctx) {
+	std::string user = ctx->get_user();
+	auto perms = ctx->get_perm("$");
+
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
+
+	if (!perms.can_manage) {
+		LOG_W("User \"%s\" tried to delete user!", user.c_str());
+		ctx->error = "Permissions denied, cannot manage!";
+		return;
+	}
+
+	auto target_user = ctx->get_arg(1);
+
+	if (target_user->v.s.compare(user) == 0) {
+		ctx->error = "You cannot delete yourself";
+		return;
+	}
+
+	auto mgr = ctx->get_account_manager();
+
+    mgr->delete_account(target_user->v.s);
+}
+
 void auth(ZeonDB::ZQL::Context* ctx) {
 	size_t arg_count = ctx->arg_count();
 	switch (arg_count) {
@@ -239,14 +295,23 @@ void auth(ZeonDB::ZQL::Context* ctx) {
 				manage_user(ctx, true);
 			} else if (subcmd->v.s.compare("demote") == 0) {
 				manage_user(ctx, false);
-			} else {
+			} else if (subcmd->v.s.compare("delete") == 0) {
+                delete_user(ctx);
+            } else {
 				ctx->error = HELP_MSG;
 			}
 			break;
 		}
 		case 3:
-			set_perms(ctx, false);
+        {
+			auto subcmd = ctx->get_arg(0);
+            if (subcmd->v.s.compare("set") == 0) {
+			    set_perms(ctx, false);
+            } else {
+                ctx->error = HELP_MSG;
+            }
 			break;
+        }
 		case 4:
 		{
 			auto subcmd = ctx->get_arg(0);

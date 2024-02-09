@@ -45,6 +45,7 @@ namespace ZeonDB::ZQL {
 			void set_options(std::map<std::string, ZeonDB::Types::Value>*);
 			std::map<std::string, ZeonDB::Types::Value>* get_options();
 			ZeonDB::Accounts::AccountManager *get_account_manager();
+            void set_account_manager(ZeonDB::Accounts::AccountManager*);
 			ZeonDB::TemplateStore *get_template_store();
 			void set_user(std::string);
 			std::string get_user();
@@ -56,5 +57,6 @@ namespace ZeonDB::ZQL {
 			size_t arg_count();
 			void set_function(ZqlFunction);
 			void execute(std::shared_ptr<ZeonDB::Types::Value>*);
+            ZeonDB::Accounts::Account* get_account(std::string);
 	};
 }

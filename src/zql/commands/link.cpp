@@ -15,6 +15,12 @@ void link_data(ZeonDB::ZQL::Context* ctx) {
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
 
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
+
 	if (!perms.can_write) {
 		LOG_W("User \"%s\" tried to link data from \"%s\" to \"%s\"", user.c_str(), from->v.s.c_str(), to->v.s.c_str());
 		ctx->error = "Permissions denied, unable to write!";

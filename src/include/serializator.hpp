@@ -3,9 +3,12 @@
 #include <fstream>
 #include <string>
 #include <memory>
+#include <filesystem>
 
 #include <types.hpp>
 #include <db.hpp>
+
+namespace fs = std::filesystem;
 
 namespace ZeonDB {
 	class DB;
@@ -20,6 +23,8 @@ namespace ZeonDB {
 			std::fstream data_file;
 			std::fstream accounts_file;
 			std::fstream templates_file;
+
+            fs::path dir_path;
 
 		public:
 			Serializer(std::string);

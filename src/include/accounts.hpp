@@ -19,6 +19,7 @@ namespace ZeonDB::Accounts {
 
 	struct Account {
 		unsigned char password[SHA256_DIGEST_LENGTH];
+        bool special;
 	};
 
 	class AccountManager {
@@ -26,9 +27,15 @@ namespace ZeonDB::Accounts {
 			std::map<std::string, Account> accounts;
 
 		public:
+            std::string def_user = "dummy";
+
 			void register_account(std::string, Account);
 			bool login(std::string, unsigned char[SHA256_DIGEST_LENGTH]);
+            bool delete_account(std::string);
+            bool has_account(std::string);
 			void serialize(std::fstream&);
 			void unserialize(SerializationContext);
+            size_t account_count();
+            Account* get_account(std::string);
 	};
 }

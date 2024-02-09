@@ -72,7 +72,7 @@ namespace ZeonAPI {
 		out[SHA256_DIGEST_LENGTH] = 0;
 
 		std::string msg = username + " ";
-		msg.append((char *) out);
+		msg.append((char *) out, SHA256_DIGEST_LENGTH);
 
 		this->send_message(msg, ZeonFrameStatus::Auth);
 		uv_read_start((uv_stream_t*) &this->tcp, alloc_header, get_frame);

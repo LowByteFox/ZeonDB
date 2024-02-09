@@ -45,6 +45,18 @@ void version() {
 	exit(0);
 }
 
+std::string generatePassword(int length) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(33, 126); // ASCII range for printable characters
+
+    std::string password;
+    for (int i = 0; i < length; ++i) {
+        password += static_cast<char>(dis(gen));
+    }
+    return password;
+}
+
 ZeonDB::Serializer serializer(".zeondb-dat");
 
 void signal_handler(uv_signal_t *handle, int _) {
@@ -75,21 +87,39 @@ int main(int argc, char **argv) {
 	ZeonDB::DB db;
 	serializer.unserialize(db);
 
-	unsigned char out[SHA256_DIGEST_LENGTH];
+        printf(R"( ______                ____________ 
+|___  /                |  _  \ ___ \
+   / /  ___  ___  _ __ | | | | |_/ /
+  / /  / _ \/ _ \| '_ \| | | | ___ \
+./ /__|  __/ (_) | | | | |/ /| |_/ /
+\_____/\___|\___/|_| |_|___/ \____/  
 
-	ZeonDB::SSL::SHA256("1234", out);
+Multi-model, high performance, NoSQL database
 
-	ZeonDB::Accounts::Account acc;
-	ZeonDB::Accounts::Permission perm = {
-		.can_write = true,
-		.can_read = true,
-		.can_manage = true,
-	};
+)");
+    if (db.account_count() == 0) {
+        std::string pass = generatePassword(12);
 
-	memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
+        printf("\e[31;1mYou see this message because this is your first time running ZeonDB\n");
+        printf("Default user for ZeonDB is called \e[36;1mdummy\e[31;1m with password \e[36;1m%s\e[31;1m\n\n\e[0m", pass.c_str());
+        unsigned char out[SHA256_DIGEST_LENGTH];
 
-	db.register_account("dummy", acc);
-	db.assign_perm("dummy", "$", perm);
+        ZeonDB::SSL::SHA256(pass.c_str(), out);
+
+        ZeonDB::Accounts::Account acc;
+        ZeonDB::Accounts::Permission perm = {
+            .can_write = true,
+            .can_read = true,
+            .can_manage = true,
+        };
+
+        memcpy(acc.password, out, SHA256_DIGEST_LENGTH);
+        acc.special = true;
+
+        db.register_account("dummy", acc);
+        db.assign_perm("dummy", "$", perm);
+    }
+
 	db.run();
 
 	serializer.serialize(db);

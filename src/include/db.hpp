@@ -33,6 +33,8 @@ namespace ZeonDB {
 			DB();
 			void register_account(std::string, Accounts::Account);
 			void add_template(std::string, Template);
+            bool has_account(std::string);
+            size_t account_count();
 			bool login(std::string, unsigned char[SHA256_DIGEST_LENGTH]);
 			void assign_perm(std::string, std::string, Accounts::Permission);
 			ZQL::ZqlTrace execute(std::string, std::string, ZeonDB::Net::Client*);

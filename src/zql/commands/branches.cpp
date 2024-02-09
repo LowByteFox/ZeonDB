@@ -21,6 +21,12 @@ void merge_branches(ZeonDB::ZQL::Context* ctx) {
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
 
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
+
 	if (!perms.can_read) {
 		ctx->error = "Permissions deniend, unable to read!";
 		return;
@@ -153,6 +159,12 @@ void get_branches(ZeonDB::ZQL::Context* ctx) {
 
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
+
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
 
 	if (!perms.can_read) {
 		ctx->error = "Permissions deniend, unable to read!";

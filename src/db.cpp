@@ -64,6 +64,10 @@ namespace ZeonDB {
 		this->accs.register_account(username, acc);
 	}
 
+    bool DB::has_account(std::string username) {
+        return this->accs.has_account(username);
+    }
+
 	bool DB::login(std::string username, unsigned char encrypted_password[SHA256_DIGEST_LENGTH]) {
 		return this->accs.login(username, encrypted_password);
 	}
@@ -92,6 +96,7 @@ namespace ZeonDB {
 			ctx.templ_store = &this->templates;
 			ctx.set_user(username);
 			ctx.set_options(c->get_opts());
+            ctx.set_account_manager(&this->accs);
 			if (ctx.error.length() > 0) {
 				return (ZQL::ZqlTrace) {
 					.value = nullptr,
@@ -152,4 +157,8 @@ namespace ZeonDB {
 		};
 		this->templates.unserialize(ctx);
 	}
+
+    size_t DB::account_count() {
+        return this->accs.account_count();
+    }
 }

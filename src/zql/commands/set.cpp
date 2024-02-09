@@ -14,6 +14,12 @@ void set_casual(ZeonDB::ZQL::Context* ctx) {
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
 
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
+
 	if (!perms.can_write) {
 		ctx->error = "Permissions deniend, unable to write!";
 		return;

@@ -35,6 +35,10 @@ namespace ZeonDB::ZQL {
 		return this->amgr;
 	}
 
+    void Context::set_account_manager(ZeonDB::Accounts::AccountManager* amgr) {
+        this->amgr = amgr;
+    }
+
 	ZeonDB::TemplateStore *Context::get_template_store() {
 		return this->templ_store;
 	}
@@ -70,4 +74,8 @@ namespace ZeonDB::ZQL {
 
 		this->fn(this);
 	}
+
+    ZeonDB::Accounts::Account* Context::get_account(std::string username) {
+        return this->amgr->get_account(username);
+    }
 }

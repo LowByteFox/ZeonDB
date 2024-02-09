@@ -19,11 +19,6 @@ if(WIN32)
 	link_libraries("-static")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fstack-protector-all")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector-all")
-endif()
-
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SSL libressl QUIET)
 
@@ -66,7 +61,7 @@ link_libraries(${SSL_LIBRARIES} ${UV_LIBRARIES})
 add_compile_options(${SSL_CFLAGS_OTHER} ${UV_CFLAGS_OTHER})
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-	add_compile_options(-g)
+    add_compile_options(-g -D_DEBUG -fstack-protector-all)
 endif()
 
 file(GLOB_RECURSE ZEONDB_SOURCES "src/*.cpp")

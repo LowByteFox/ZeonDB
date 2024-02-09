@@ -23,6 +23,11 @@ void get_template(ZeonDB::ZQL::Context* ctx) {
 
 	LOG_I("User \"%s\" accessed template \"%s\"", user.c_str(), name->v.s.c_str());
 
+    if (user.compare("dummy") == 0) {
+        ctx->error = "User dummy can only create account!";
+        return;
+    }
+
 	auto templ = ctx->get_template_store();
 	*ctx->temporary_buffer = templ->create(name->v.s);
 }
@@ -33,6 +38,12 @@ void set_template(ZeonDB::ZQL::Context* ctx) {
 
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
+
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
 
 	if (!perms.can_write) {
 		LOG_W("User \"%s\" tried to create template \"%s\" at \"%s\"", user.c_str(), name->v.s.c_str(), key->v.s.c_str());
@@ -100,6 +111,12 @@ void create_template(ZeonDB::ZQL::Context* ctx) {
 
 	std::string user = ctx->get_user();
 	auto perms = ctx->get_perm("$");
+
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
+        return;
+    }
 
 	if (!perms.can_manage) {
 		LOG_W("User \"%s\" tried to make new template \"%s\"", user.c_str(), name->v.s.c_str());

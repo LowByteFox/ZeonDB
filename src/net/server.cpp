@@ -85,7 +85,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 	switch (frame->get_status()) {
 		case ZeonFrameStatus::Auth:
 			{
-				LOG_V("Recieved AUTH", nullptr);
+				LOG_D("Recieved AUTH", nullptr);
 				std::string& msg = client->buffer;
 				size_t index = std::distance(msg.begin(), std::find(msg.begin(), msg.end(), ' '));
 				std::string username;
@@ -110,15 +110,15 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 			break;
 		case ZeonFrameStatus::Command:
 			{
-				LOG_V("Recieved COMMAND", nullptr);
-				LOG_V("Executing!", nullptr);
+				LOG_D("Recieved COMMAND", nullptr);
+				LOG_D("Executing!", nullptr);
 				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer, client->get_user(), client);
 
 				if (trace.error.length() > 0) {
-					LOG_V("Execution ended with an Error!", nullptr);
+					LOG_D("Execution ended with an Error!", nullptr);
 					client->send_message(trace.error, ZeonFrameStatus::Error);
 				} else if (trace.value != nullptr) {
-					LOG_V("Execution ended with a Value!", nullptr);
+					LOG_D("Execution ended with a Value!", nullptr);
 
 					FormatType fmtType = FormatType::JSON;
 					auto opts = client->get_opts();
@@ -131,7 +131,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 
 					client->send_message(res, ZeonFrameStatus::Command);
 				} else {
-					LOG_V("Execution ended", nullptr);
+					LOG_D("Execution ended", nullptr);
 					std::string res = "OK";
 
 					client->send_message(res, ZeonFrameStatus::Command);
@@ -158,7 +158,7 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 		client->read += nread;
 
 		if (client->read == 9) {
-			LOG_V("Received a frame!", nullptr);
+			LOG_D("Received a frame!", nullptr);
 			client->frame.from_buffer();
 			client->transfer_max = client->frame.get_length();
 			client->read = 0;
@@ -187,7 +187,6 @@ void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	}
 
 	if (nread > 0) {
-		LOG_W("Read: %d", nread);
 		client->transfer_max -= nread;
 		client->buffer += std::string(client->transfer_buffer.data(), nread);
 
@@ -238,6 +237,7 @@ namespace ZeonDB::Net {
 
 		LOG_I("Running on port %d", this->port);
 		uv_run(this->loop, UV_RUN_DEFAULT);
+        printf("\r");
 		LOG_I("Stopping server!", nullptr);
 	}
 }

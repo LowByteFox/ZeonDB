@@ -23,8 +23,9 @@ void get_template(ZeonDB::ZQL::Context* ctx) {
 
 	LOG_I("User \"%s\" accessed template \"%s\"", user.c_str(), name->v.s.c_str());
 
-    if (user.compare("dummy") == 0) {
-        ctx->error = "User dummy can only create account!";
+    auto* acc = ctx->get_account(user);
+    if (acc && acc->special) {
+        ctx->error = "Dummy can only create account!";
         return;
     }
 

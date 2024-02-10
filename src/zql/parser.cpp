@@ -38,6 +38,10 @@ std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
 	FN(options),
 };
 
+std::string substr(std::string_view& view, size_t start, size_t len) {
+    return std::string({view.begin() + start, view.begin() + start + len});
+}
+
 namespace ZeonDB::ZQL {
 	ZqlTrace Parser::parse_primitive_value(Token tok) {
 		std::shared_ptr<Value> val = nullptr;
@@ -45,19 +49,19 @@ namespace ZeonDB::ZQL {
 		switch (tok.type) {
 			case TokenTypes::identifier:
 			case TokenTypes::string:
-				val = Value::new_string(this->code.substr(tok.col, tok.len));
+				val = Value::new_string(substr(this->code, tok.col, tok.len));
 				break;
 			case TokenTypes::integer:
-				val = Value::new_int(std::stoi(this->code.substr(tok.col, tok.len)));
+				val = Value::new_int(std::stoi(substr(this->code, tok.col, tok.len)));
 				break;
 			case TokenTypes::floating:
-				val = Value::new_float(std::stof(this->code.substr(tok.col, tok.len)));
+				val = Value::new_float(std::stof(substr(this->code, tok.col, tok.len)));
 				break;
 			case TokenTypes::boolean:
 			{
 				bool bool_val = false;
 
-				std::string str = this->code.substr(tok.col, tok.len);
+				std::string str = substr(this->code, tok.col, tok.len);
 				if (str.compare("true") == 0) {
 					bool_val = true;
 				}
@@ -181,7 +185,7 @@ namespace ZeonDB::ZQL {
 
 		Token tok = this->lexer.parse_token();
 
-		LOG_D("Got token %s %d", this->code.substr(tok.col, tok.len).c_str(), tok.type);
+		LOG_D("Got token %s %d", substr(this->code, tok.col, tok.len).c_str(), tok.type);
 		if (tok.type != TokenTypes::identifier) {
 			Context ctx(this->db, "Expected identifier at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
 			ctxs.push_back(ctx);
@@ -195,7 +199,7 @@ namespace ZeonDB::ZQL {
 				return ctxs;
 			} else {
 				Context ctx(this->db);
-				std::string fn_name = this->code.substr(tok.col, tok.len);
+				std::string fn_name = substr(this->code, tok.col, tok.len);
 				if (!commands.contains(fn_name)) {
 					Context ctx(this->db, "Unknown command at " + std::to_string(tok.line) + ":" + std::to_string(tok.col));
 					ctxs.push_back(ctx);
@@ -207,7 +211,7 @@ namespace ZeonDB::ZQL {
 					tok = this->lexer.parse_token();
 					if (tok.type == TokenTypes::eof or tok.type == TokenTypes::semicolon) break;
 
-					LOG_D("Parsing token %s", this->code.substr(tok.col, tok.len).c_str());
+					LOG_D("Parsing token %s", substr(this->code, tok.col, tok.len).c_str());
 					ZqlTrace arg = this->parse_value(tok);
 					ctx.add_arg(arg);
 					if (arg.error.length() > 0) {

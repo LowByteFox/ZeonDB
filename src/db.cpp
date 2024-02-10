@@ -81,7 +81,7 @@ namespace ZeonDB {
 		this->server.serve(this);
 	}
 
-	ZQL::ZqlTrace DB::execute(std::string script, std::string username, ZeonDB::Net::Client *c) {
+	ZQL::ZqlTrace DB::execute(std::string_view script, std::string username, ZeonDB::Net::Client *c) {
 		ZQL::Parser parser(this->db, script);
 		std::vector<ZQL::Context> ctxs = parser.parse();
 

@@ -79,6 +79,8 @@ namespace ZeonDB {
 			key.version = this->def_ver;
 		}
 
+        if (!this->db.contains(key.key)) return nullptr;
+
 		if (!this->db[key.key].contains(key.version)) return nullptr;
 
 		auto val = this->db[key.key][key.version];

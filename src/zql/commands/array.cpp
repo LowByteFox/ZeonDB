@@ -194,7 +194,7 @@ void array(ZeonDB::ZQL::Context* ctx) {
 			auto subcmd = ctx->get_arg(0);
             if (subcmd->v.s.compare("push") == 0) {
 			    manage_item(ctx, true);
-            } else if (subcmd->v.s.compare("erase")) {
+            } else if (subcmd->v.s.compare("erase") == 0) {
                 manage_item(ctx, false);
             } else {
                 ctx->error = HELP_MSG;

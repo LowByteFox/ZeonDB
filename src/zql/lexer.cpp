@@ -66,7 +66,7 @@ namespace ZeonDB::ZQL {
 		this->step_back(1);
 		tok.len = this->pos - tok.col;
 
-		std::string txt = this->code.substr(tok.col, tok.len);
+		std::string_view txt = this->code.substr(tok.col, tok.len);
 
 		if (txt.compare("true") == 0) {
 			tok.type = TokenTypes::boolean;

@@ -37,7 +37,7 @@ namespace ZeonDB {
             size_t account_count();
 			bool login(std::string, unsigned char[SHA256_DIGEST_LENGTH]);
 			void assign_perm(std::string, std::string, Accounts::Permission);
-			ZQL::ZqlTrace execute(std::string, std::string, ZeonDB::Net::Client*);
+			ZQL::ZqlTrace execute(std::string_view, std::string, ZeonDB::Net::Client*);
 			void run();
 			void serialize(std::fstream&);
 			void unserialize(std::fstream&);

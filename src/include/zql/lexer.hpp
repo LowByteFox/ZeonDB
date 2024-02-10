@@ -29,13 +29,13 @@ namespace ZeonDB::ZQL {
 
 	class Lexer {
 		private:
-			std::string code;
+			std::string_view code;
 			size_t pos;
 			size_t len;
 			size_t col;
 			size_t line;
 		public:
-			Lexer(std::string text) : code(text), pos(0), len(text.length()), col(0), line(0) {}
+			Lexer(std::string_view text) : code(text), pos(0), len(text.length()), col(0), line(0) {}
 			char read_char();
 			void step_back(size_t);
 			void skip_blank();

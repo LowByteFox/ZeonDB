@@ -10,7 +10,7 @@
 
 namespace ZeonDB::Accounts {
 	void AccountManager::register_account(std::string username, Account account) {
-		LOG_I("Account \"%s\" was registered! %p", username.c_str(), this);
+		LOG_I("Account \"%s\" was registered!", username.c_str());
 		this->accounts[username] = account;
 	}
 

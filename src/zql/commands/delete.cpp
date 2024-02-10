@@ -74,7 +74,6 @@ void del(ZeonDB::ZQL::Context* ctx) {
 		default:
 			ctx->error = R"(help: delete (local) <key>
 delete <key> -- delete value at <key>
-delete local <key> -- delete value at key <key> in local buffer
 
 key syntax: key@branch[index]
 - the ..range is optional)";

@@ -23,11 +23,13 @@ EXTRN(link_cmd);
 EXTRN(link_cmd);
 EXTRN(branches);
 EXTRN(options);
+EXTRN(array);
 
 std::map<std::string, ZeonDB::ZQL::ZqlFunction> commands {
 	FN(help),
 	FN(branches),
 	FN(get),
+	FN(array),
 	{"delete", del},
 	FN(set),
 	FN(auth),

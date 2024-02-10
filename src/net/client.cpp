@@ -15,7 +15,7 @@ void send_msg(uv_write_t *req, int status) {
     delete req;
 }
 
-#define SPLIT_SIZE 8192
+#define SPLIT_SIZE 2048
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

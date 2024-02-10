@@ -73,10 +73,7 @@ void set(ZeonDB::ZQL::Context* ctx) {
 		default:
 			ctx->error = R"(help: set (local) <key> (<value>)(from (local) <key2>)
 set <key> <value> -- set <value> at specific <key>
-set local <key> <value> -- set <value> at specific <key> in local buffer
-set local <key> from <key2> -- set value from <key2> at specific <key> in local buffer
 
-key syntax: key@branch[index]
-- the ..range is optional)";
+key syntax: key@branch[index])";
 	}
 }

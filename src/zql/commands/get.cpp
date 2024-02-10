@@ -85,9 +85,7 @@ void get(ZeonDB::ZQL::Context* ctx) {
 		default:
 			ctx->error = R"(help: get (local) <key>
 get <key> -- get value of <key> as local buffer
-get local <key> -- get value of <key> from local buffer as local buffer
 
-key syntax: key@branch[index]
-- the ..range is optional)";
+key syntax: key@branch[index])";
 	}
 }

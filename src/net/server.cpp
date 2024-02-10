@@ -17,8 +17,7 @@
 using ZeonDB::Net::ZeonFrameStatus;
 using ZeonDB::Types::FormatType;
 
-void alloc_header(uv_handle_t*, size_t, uv_buf_t*);
-void alloc_transfer(uv_handle_t*, size_t, uv_buf_t*);
+void alloc_buffer(uv_handle_t*, size_t, uv_buf_t*);
 void get_frame(uv_stream_t *, ssize_t, const uv_buf_t*);
 void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
 void client_close(uv_handle_t *);
@@ -51,26 +50,15 @@ void on_connect(uv_stream_t *server, int status) {
 		cl->get_client()->data = cl;
 
 		cl->send_message("", ZeonFrameStatus::Ok);
-		uv_read_start((uv_stream_t*) cl->get_client(), alloc_header, get_frame);
+		uv_read_start((uv_stream_t*) cl->get_client(), alloc_buffer, get_frame);
 	}
 }
 
-void alloc_header(uv_handle_t *handle, size_t _, uv_buf_t *buf) {
+void alloc_buffer(uv_handle_t *handle, size_t suggest, uv_buf_t *buf) {
 	auto* client = static_cast<ZeonDB::Net::Client*>(handle->data);
+    client->buffer.resize(client->buffer.size() + suggest);
 
-	if (client->read > 0) {
-		buf->len = 9 - client->read;
-		buf->base = client->frame.get_buffer() + client->read;
-	}
-
-	buf->base = client->frame.get_buffer();
-	buf->len = 9;
-}
-
-void alloc_transfer(uv_handle_t *handle, size_t suggest, uv_buf_t *buf) {
-	auto* client = static_cast<ZeonDB::Net::Client*>(handle->data);
-
-	buf->base = client->transfer_buffer.data();
+    buf->base = client->buffer.data() + client->read;
 	buf->len = suggest;
 }
 
@@ -87,7 +75,8 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 		case ZeonFrameStatus::Auth:
 			{
 				LOG_D("Recieved AUTH", nullptr);
-				std::string& msg = client->buffer;
+				std::string msg = client->buffer.data() + 9;
+
 				size_t index = std::distance(msg.begin(), std::find(msg.begin(), msg.end(), ' '));
 				std::string username;
 				username.append(msg.data(), index);
@@ -113,7 +102,7 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 			{
 				LOG_D("Recieved COMMAND", nullptr);
 				LOG_D("Executing!", nullptr);
-				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer, client->get_user(), client);
+				ZeonDB::ZQL::ZqlTrace trace = client->get_server()->get_db()->execute(client->buffer.data() + 9, client->get_user(), client);
 
 				if (trace.error.length() > 0) {
 					LOG_D("Execution ended with an Error!", nullptr);
@@ -143,7 +132,10 @@ void handle_frame(ZeonDB::Net::Client *client, uv_stream_t *stream) {
 		default:
 			break;
 	}
+
 	client->buffer = "";
+    client->header_parsed = false;
+    client->read = 0;
 }
 
 void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
@@ -157,18 +149,22 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	}
 
 	if (nread > 0) {
-		client->read += nread;
-
-		if (client->read == 9) {
+		if (client->buffer.size() >= 9) {
 			LOG_D("Received a frame!", nullptr);
-			client->frame.from_buffer();
-			client->transfer_max = client->frame.get_length();
-			client->read = 0;
+            if (!client->header_parsed) {
+                char *buff = client->frame.get_buffer();
+                memcpy(buff, client->buffer.data(), 9);
+    			client->frame.from_buffer();
+    			client->transfer_max = client->frame.get_length() - nread + 9;
+                client->read = nread;
+                client->header_parsed = true;
+            } else {
+    			client->transfer_max -= nread;
+                client->read += nread;
+            }
 
-			if (client->transfer_max > 0) {
-				uv_read_stop(handle);
-				uv_read_start((uv_stream_t*) client->get_client(), alloc_transfer, transfer_buffer);
-			} else {
+			if (client->transfer_max <= 0) {
+                client->buffer.resize(client->read);
 				handle_frame(client, handle);
 			}
 		}
@@ -176,32 +172,7 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	} else {
 		LOG_E("%s", uv_strerror(nread));
 		uv_read_stop(handle);
-	}
-}
-
-void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
-	auto* client = static_cast<ZeonDB::Net::Client*>(handle->data);
-
-	if (nread == UV_EOF) {
-		LOG_I("Client disconnected!", nullptr);
-		uv_read_stop(handle);
         uv_close((uv_handle_t*) handle, client_close);
-		return;
-	}
-
-	if (nread > 0) {
-		client->transfer_max -= nread;
-		client->buffer += std::string(client->transfer_buffer.data(), nread);
-
-		if (client->transfer_max <= 0) {
-			uv_read_stop(handle);
-			uv_read_start((uv_stream_t*) client->get_client(), alloc_header, get_frame);
-			handle_frame(client, handle);
-		}
-	} else if (nread == 0) {
-	} else {
-		LOG_E("%s", uv_strerror(nread));
-		uv_read_stop(handle);
 	}
 }
 

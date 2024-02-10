@@ -21,11 +21,11 @@ namespace ZeonDB::Net {
 
 		public:
             // LIBUV SUGGESTS
-			std::array<char, 65536> transfer_buffer;
 			ZeonFrame frame; // for libuv
-			std::string buffer; // building command
-		 	size_t read;
-			ssize_t transfer_max;
+			std::string buffer; // transfer buffer
+			ssize_t transfer_max; // gets substracted
+            bool header_parsed; // if the header was parsed
+            size_t read;
 
 			Client(Server*, uv_tcp_t);
 

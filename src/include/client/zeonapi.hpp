@@ -9,8 +9,7 @@
 
 namespace ZeonAPI {
 	class Connection {
-		friend void alloc_header(uv_handle_t*, size_t, uv_buf_t*);
-		friend void alloc_transfer(uv_handle_t*, size_t, uv_buf_t*);
+		friend void alloc_buffer(uv_handle_t*, size_t, uv_buf_t*);
 		friend void get_frame(uv_stream_t *, ssize_t, const uv_buf_t*);
 		friend void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
 		friend void handle_frame(ZeonAPI::Connection *client, uv_stream_t *stream);
@@ -21,15 +20,14 @@ namespace ZeonAPI {
 			uv_connect_t conn;
 			uv_buf_t uv_buf;
 			struct sockaddr_in addr;
-			std::string buffer;
 			bool authenticated;
 			bool connected;
-			ZeonDB::Net::ZeonFrame frame;
-			size_t read;
-			ssize_t transfer_max;
 
-            // LIBUV SUGGESTED
-			std::array<char, 65536> transfer_buffer;
+			ZeonDB::Net::ZeonFrame frame;
+			std::string buffer;
+			ssize_t transfer_max;
+            bool header_parsed;
+            size_t read;
 
 			std::string error; // error from operation
 			

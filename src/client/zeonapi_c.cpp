@@ -29,7 +29,7 @@ const char* ZeonAPI_Connection_get_error(ZeonAPI_Connection* connection) {
 
 const char* ZeonAPI_Connection_get_buffer(ZeonAPI_Connection* connection) {
     if (connection) {
-        return ((ZeonAPI::Connection*)connection)->get_buffer()->c_str();
+        return ((ZeonAPI::Connection*)connection)->get_buffer()->c_str() + 9;
     }
     return nullptr;  // Return nullptr if the connection pointer is null
 }

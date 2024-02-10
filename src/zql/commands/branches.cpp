@@ -9,7 +9,7 @@ using ZeonDB::Types::ManagedValue;
 const static std::string HELP_MSG=R"(help: branches (subcommand)
 branches get <key> -- get versions of <key>
 branches get local <key> -- get versions of <key> from local buffer
-branches merge <key> <v1> <v2> -- merge version <v2> into <v1> at <key>
+branches merge <key> <b1> <b2> -- merge branch <b2> into <b1> at <key>
 
 key syntax: key[index])";
 

@@ -66,12 +66,10 @@ namespace ZeonDB {
 		if (!has) return has;
 
 		if (key.version == this->def_ver) {
-			for (auto& pair: this->db[key.key]) {
-				this->db[key.key].erase(pair.first);
-			}
-		}
-
-		this->db[key.key].erase(key.version);
+            this->db.erase(key.key);
+		} else {
+    		this->db[key.key].erase(key.version);
+        }
 
 		return has;
 	}
@@ -176,9 +174,9 @@ namespace ZeonDB {
 			stream.write(reinterpret_cast<char*>(&len), sizeof(size_t));
 			stream.write(key.data(), len);
 
-			// default value is being serialized
-			stream.write(reinterpret_cast<char*>(&(value[this->def_ver]->t)), sizeof(ZeonDB::Types::Type));
-			value[this->def_ver]->serialize(stream);
+            // default value is being serialized
+            stream.write(reinterpret_cast<char*>(&(value[this->def_ver]->t)), sizeof(ZeonDB::Types::Type));
+            value[this->def_ver]->serialize(stream);
 
 			// number of versions
 			len = value.size() - 1; // - 1 is the default version

@@ -1,4 +1,5 @@
 #include <zql/ctx.hpp>
+#include <logger.hpp>
 
 void del_casual(ZeonDB::ZQL::Context* ctx) {
 	auto key = ctx->get_arg(0);

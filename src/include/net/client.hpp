@@ -20,7 +20,8 @@ namespace ZeonDB::Net {
 			bool opts_set;
 
 		public:
-			std::array<char, 1024> transfer_buffer;
+            // LIBUV SUGGESTS
+			std::array<char, 65536> transfer_buffer;
 			ZeonFrame frame; // for libuv
 			std::string buffer; // building command
 		 	size_t read;

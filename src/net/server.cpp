@@ -21,6 +21,7 @@ void alloc_header(uv_handle_t*, size_t, uv_buf_t*);
 void alloc_transfer(uv_handle_t*, size_t, uv_buf_t*);
 void get_frame(uv_stream_t *, ssize_t, const uv_buf_t*);
 void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf);
+void client_close(uv_handle_t *);
 
 void on_connect(uv_stream_t *server, int status) {
 	auto* s = static_cast<ZeonDB::Net::Server*>(server->data);
@@ -66,11 +67,11 @@ void alloc_header(uv_handle_t *handle, size_t _, uv_buf_t *buf) {
 	buf->len = 9;
 }
 
-void alloc_transfer(uv_handle_t *handle, size_t _, uv_buf_t *buf) {
+void alloc_transfer(uv_handle_t *handle, size_t suggest, uv_buf_t *buf) {
 	auto* client = static_cast<ZeonDB::Net::Client*>(handle->data);
 
 	buf->base = client->transfer_buffer.data();
-	buf->len = 1024;
+	buf->len = suggest;
 }
 
 void close_client(uv_handle_t *handle) {
@@ -151,6 +152,7 @@ void get_frame(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	if (nread == UV_EOF) {
 		LOG_I("Client disconnected!", nullptr);
 		uv_read_stop(handle);
+        uv_close((uv_handle_t*) handle, client_close);
 		return;
 	}
 
@@ -183,6 +185,7 @@ void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 	if (nread == UV_EOF) {
 		LOG_I("Client disconnected!", nullptr);
 		uv_read_stop(handle);
+        uv_close((uv_handle_t*) handle, client_close);
 		return;
 	}
 
@@ -200,6 +203,11 @@ void transfer_buffer(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf) {
 		LOG_E("%s", uv_strerror(nread));
 		uv_read_stop(handle);
 	}
+}
+
+void client_close(uv_handle_t *handle) {
+	auto* client = static_cast<ZeonDB::Net::Client*>(handle->data);
+    delete client;
 }
 
 namespace ZeonDB::Net {

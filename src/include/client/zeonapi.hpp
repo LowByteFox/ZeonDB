@@ -28,7 +28,8 @@ namespace ZeonAPI {
 			size_t read;
 			ssize_t transfer_max;
 
-			std::array<char, 1024> transfer_buffer;
+            // LIBUV SUGGESTED
+			std::array<char, 65536> transfer_buffer;
 
 			std::string error; // error from operation
 			

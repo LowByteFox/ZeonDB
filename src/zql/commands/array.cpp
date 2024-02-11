@@ -52,6 +52,10 @@ void get_length(ZeonDB::ZQL::Context* ctx) {
             }
 
             auto val = current->v.c.get(s);
+            if (val == nullptr) {
+                ctx->error = "Array expected at key " + s;
+                return;
+            }
 
             if (val->t != Type::Array) {
                 ctx->error = "Array expected at key " + s;
@@ -126,6 +130,10 @@ void manage_item(ZeonDB::ZQL::Context* ctx, bool not_erase) {
             }
 
             auto val = current->v.c.get(s);
+            if (val == nullptr) {
+                ctx->error = "Array expected at key " + s;
+                return;
+            }
 
             if (val->t != Type::Array) {
                 ctx->error = "Array expected at key " + s;

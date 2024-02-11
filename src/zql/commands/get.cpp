@@ -1,5 +1,3 @@
-#include <cstdio>
-
 #include <types.hpp>
 #include <zql/ctx.hpp>
 

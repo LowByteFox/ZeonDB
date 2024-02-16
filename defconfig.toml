@@ -4,7 +4,7 @@ format = "JSON" # ZQL | JSON
 # bundle -> combine persisted data into single archive ideal for backups and migration
 # filename -> name of the archive ( prefix if not bundle)
 [persistence]
-enable = false
+enable = true
 
 [branch]
 merge_mode = "overwrite" # no_overwrite | overwrite | overwrite_partial | swap
@@ -16,7 +16,6 @@ min_length = 8
 max_length = 32
 
 [communication]
-max_connections = 1000
 [communication.ip]
 enable = true
 port = 6748

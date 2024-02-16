@@ -43,6 +43,16 @@ int main(int argc, char **argv) {
 		.help("print version of ZeonCTL")
 		.nargs(0);
 
+    program.add_argument("--host")
+        .default_value<std::string>("127.0.0.1")
+        .nargs(1)
+        .help("Specify ip of host to connect to");
+
+    program.add_argument("--port")
+        .default_value<size_t>(6748)
+        .nargs(1)
+        .help("Specify port of the host to connect to");
+
 	try {
 		program.parse_args(argc, argv);
 	} catch (const std::exception& err) {
@@ -50,7 +60,9 @@ int main(int argc, char **argv) {
 		std::exit(1);
 	}
 
-	ZeonAPI::Connection zeon("127.0.0.1", 6748);
+    std::string host = program.get<std::string>("--host");
+
+	ZeonAPI::Connection zeon(host, program.get<size_t>("--port"));
 
 	std::string username;
 	std::string password;
@@ -62,7 +74,7 @@ int main(int argc, char **argv) {
 
 	if (zeon.auth(username, password)) {
 		while (true) {
-			printf("(%s@127.0.0.1)> ", username.c_str());
+			printf("(%s@%s)> ", username.c_str(), host.c_str());
 			std::string cmd;
 			std::getline(std::cin, cmd);
 

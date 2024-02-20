@@ -8,6 +8,7 @@
 
 #include <uv.h>
 #include <openssl/opensslv.h>
+#include <termios.h>
 #include <cstring>
 
 #if defined(_WIN32) || defined(__LITTLE_ENDIAN__) ||(defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -60,6 +61,9 @@ int main(int argc, char **argv) {
 		std::exit(1);
 	}
 
+    struct termios term;
+    tcgetattr(fileno(stdin), &term);
+
     std::string host = program.get<std::string>("--host");
 
 	ZeonAPI::Connection zeon(host, program.get<size_t>("--port"));
@@ -70,7 +74,13 @@ int main(int argc, char **argv) {
 	printf("Username: ");
 	std::getline(std::cin, username);
 	printf("Password: ");
+
+    term.c_lflag &= ~ECHO;
+    tcsetattr(fileno(stdin), 0, &term);
 	std::getline(std::cin, password);
+    term.c_lflag |= ECHO;
+    tcsetattr(fileno(stdin), 0, &term);
+    putchar('\n');
 
 	if (zeon.auth(username, password)) {
 		while (true) {
